@@ -1,0 +1,597 @@
+{
+    "jeu": {
+        "nom": "Albert Royale",
+        "version": "0.1",
+        "remarques": "Toutes les cartes incluent : élixir, PV, DPS d'attaque, type, vitesse, portée, cibles, capacités."
+    },
+    "cartes": [
+        {
+            "id": "david_archer_stylet",
+            "nom": "David",
+            "surnom": "Archer magique au stylet",
+            "type": "troupe",
+            "élixir": 5,
+            "pv": 1600,
+            "atk_dps": 140,
+            "vitesse": "moyenne",
+            "portée": "très_longue",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "projectiles_perforants",
+                    "description": "Les stylos traversent plusieurs ennemis.",
+                    "params": {
+                        "max_pierce_targets": 3
+                    }
+                }
+            ]
+        },
+        {
+            "id": "timsit_elixir_dragon",
+            "nom": "Timsit",
+            "surnom": "Dragon d'élixir",
+            "type": "troupe",
+            "élixir": 3,
+            "pv": 850,
+            "atk_dps": 110,
+            "vitesse": "rapide",
+            "portée": "courte",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "voler_élixir",
+                    "description": "Vole 1 élixir à l'adversaire toutes les 3 attaques réussies.",
+                    "params": {
+                        "elixir_stolen": 1,
+                        "every_n_attacks": 3
+                    }
+                }
+            ]
+        },
+        {
+            "id": "jausseaud_money_bowler",
+            "nom": "Jausseaud",
+            "surnom": "Bouliste de billets",
+            "type": "troupe",
+            "élixir": 7,
+            "pv": 2300,
+            "atk_dps": 240,
+            "vitesse": "lent",
+            "portée": "moyenne",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "splash_damage",
+                    "description": "Attaque en zone avec des billets.",
+                    "params": {
+                        "radius": "medium"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "arbre_habonneau",
+            "nom": "Habonneau",
+            "surnom": "Arbre",
+            "type": "bâtiment",
+            "élixir": 2,
+            "pv": 1500,
+            "atk_dps": 0,
+            "vitesse": "aucune",
+            "portée": "aucune",
+            "cibles": [],
+            "capacités": [
+                {
+                    "clé": "blocking_slow",
+                    "description": "Bloque et ralentit les ennemis proches.",
+                    "params": {
+                        "slow_percent": 25,
+                        "aura_radius": "medium"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "baptiste_tesla",
+            "nom": "Baptiste",
+            "surnom": "Tesla sur batterie",
+            "type": "bâtiment",
+            "élixir": 4,
+            "pv": 1400,
+            "atk_dps": 240,
+            "vitesse": "aucune",
+            "portée": "moyenne",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "chain_lightning",
+                    "description": "Onde électrique qui rebondit sur plusieurs ennemis.",
+                    "params": {
+                        "max_chain_targets": 3,
+                        "falloff": [
+                            1.0,
+                            0.7,
+                            0.5
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "id": "nael_biker_sapper",
+            "nom": "Nael",
+            "surnom": "Sapeur en moto",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 850,
+            "atk_dps": 0,
+            "vitesse": "très_rapide",
+            "portée": "mêlée",
+            "cibles": [
+                "bâtiments"
+            ],
+            "capacités": [
+                {
+                    "clé": "bombe_suicide",
+                    "description": "Explose au contact d'une tour/bâtiment (gros dégâts bâtiments).",
+                    "params": {
+                        "explosion_damage": 350,
+                        "only_hits_buildings": true,
+                        "splash_radius": "small"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "alexis_grandpa_wizard",
+            "nom": "Alexis",
+            "surnom": "Papi sorcier",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1300,
+            "atk_dps": 150,
+            "vitesse": "lent",
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "lent_à_l_impact",
+                    "description": "Ses attaques ralentissent les ennemis touchés.",
+                    "params": {
+                        "slow_percent": 20,
+                        "duration_sec": 2.5
+                    }
+                }
+            ]
+        },
+        {
+            "id": "sacha_control_agent",
+            "nom": "Sacha",
+            "surnom": "Agent de contrôle",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 2100,
+            "atk_dps": 100,
+            "vitesse": "moyenne",
+            "portée": "mêlée",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "étourdir",
+                    "description": "Étourdit les ennemis proches.",
+                    "params": {
+                        "duration_sec": 2.0,
+                        "radius": "small"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "isaac_casino_tower",
+            "nom": "Isaac",
+            "surnom": "Tour de casino",
+            "type": "bâtiment",
+            "élixir": 5,
+            "pv": 1800,
+            "atk_dps": 150,
+            "vitesse": "aucune",
+            "portée": "moyenne",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "effet_aléatoire",
+                    "description": "Déclenche un effet aléatoire (rage / boost / slow) périodiquement.",
+                    "params": {
+                        "effects": [
+                            "rage",
+                            "boost",
+                            "slow"
+                        ],
+                        "trigger_interval_sec": 6,
+                        "duration_sec": 3,
+                        "radius": "large"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mathieu_joker",
+            "nom": "Mathieu",
+            "surnom": "Joker",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1500,
+            "atk_dps": 170,
+            "vitesse": "moyenne",
+            "portée": "moyenne",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": []
+        },
+        {
+            "id": "tao_charging_prince",
+            "nom": "Tao",
+            "surnom": "Prince chargeur",
+            "type": "troupe",
+            "élixir": 5,
+            "pv": 2200,
+            "atk_dps": 220,
+            "vitesse": "rapide",
+            "portée": "mêlée",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "charge_double_damage",
+                    "description": "Après une charge, le premier coup inflige x2 dégâts.",
+                    "params": {
+                        "damage_multiplier": 2.0,
+                        "min_charge_distance": "medium"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "gabriel_math_dart_goblin",
+            "nom": "Gabriel",
+            "surnom": "Gobelin sarbacane (formules)",
+            "type": "troupe",
+            "élixir": 3,
+            "pv": 900,
+            "atk_dps": 120,
+            "vitesse": "moyenne",
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "rapid_fire",
+                    "description": "Tire en rafales.",
+                    "params": {
+                        "burst_size": 3,
+                        "burst_interval_sec": 0.6
+                    }
+                }
+            ]
+        },
+        {
+            "id": "sarah_princess",
+            "nom": "Sarah",
+            "surnom": "Princesse",
+            "type": "troupe",
+            "élixir": 3,
+            "pv": 850,
+            "atk_dps": 150,
+            "vitesse": "moyenne",
+            "portée": "très_longue",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": []
+        },
+        {
+            "id": "jacques_unstable_legend",
+            "nom": "Jacques",
+            "surnom": "Carte instable",
+            "type": "troupe",
+            "élixir": 8,
+            "pv": 4000,
+            "atk_dps": 350,
+            "vitesse": "lent",
+            "portée": "moyenne",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "coinflip_spawn",
+                    "description": "50% de chance d'apparaître, sinon l'élixir est perdu.",
+                    "params": {
+                        "spawn_probability": 0.5
+                    }
+                }
+            ]
+        },
+        {
+            "id": "theo_miner_freeze",
+            "nom": "Théo",
+            "surnom": "Mineur gel",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1600,
+            "atk_dps": 110,
+            "vitesse": "moyenne",
+            "portée": "mêlée",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "freeze_on_talk",
+                    "description": "Gèle les ennemis proches.",
+                    "params": {
+                        "duration_sec": 1.5,
+                        "radius": "small"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "mathis_enzo_tricksters",
+            "nom": "Mathis & Enzo",
+            "surnom": "Fripons (tank + bruschettas)",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1400,
+            "atk_dps": 180,
+            "vitesse": "moyenne",
+            "portée": "mixte",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": [
+                {
+                    "clé": "duo_unit",
+                    "description": "Deux unités liées : Mathis tank devant, Enzo attaque à distance derrière.",
+                    "params": {
+                        "front_unit": "Mathis",
+                        "back_unit": "Enzo",
+                        "front_hp_ratio": 0.7,
+                        "back_hp_ratio": 0.3
+                    }
+                }
+            ]
+        },
+        {
+            "id": "diego_knight",
+            "nom": "Diego",
+            "surnom": "Chevalier",
+            "type": "troupe",
+            "élixir": 3,
+            "pv": 1600,
+            "atk_dps": 150,
+            "vitesse": "moyenne",
+            "portée": "mêlée",
+            "cibles": [
+                "sol"
+            ],
+            "capacités": []
+        },
+        {
+            "id": "noah_robot_wizard",
+            "nom": "Noah",
+            "surnom": "Sorcier robotique",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1400,
+            "atk_dps": 170,
+            "vitesse": "moyenne",
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "spawn_minibots",
+                    "description": "Envoie des mini-robots régulièrement.",
+                    "params": {
+                        "spawn_interval_sec": 5.0,
+                        "bot_count": 2,
+                        "bot_pv": 250,
+                        "bot_atk_dps": 60
+                    }
+                }
+            ]
+        },
+        {
+            "id": "jules_football_musketeer",
+            "nom": "Jules",
+            "surnom": "Mousquetaire (frappes de foot)",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1300,
+            "atk_dps": 190,
+            "vitesse": "moyenne",
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "ligne_shot",
+                    "description": "Tirs en ligne droite (perce des ennemis).",
+                    "params": {
+                        "pierce_targets": 2
+                    }
+                }
+            ]
+        },
+        {
+            "id": "jack_cavalier",
+            "nom": "Jack",
+            "surnom": "Cavabelier",
+            "type": "troupe",
+            "élixir": 4,
+            "pv": 1800,
+            "atk_dps": 170,
+            "vitesse": "moyenne",
+            "portée": "mêlée",
+            "cibles": [
+                "bâtiments"
+            ],
+            "capacités": [
+                {
+                    "clé": "battle_ram_charge",
+                    "description": "Charge en ligne : repousse les ennemis sur son passage. Cible uniquement les bâtiments.",
+                    "params": {
+                        "knockback_distance_px": 16,
+                        "mini_stun_sec": 0.3,
+                        "charge_only_while_moving": true
+                    }
+                }
+            ]
+        },
+        {
+            "id": "salome_inferno_dragon",
+            "nom": "Salomé",
+            "surnom": "Dragon de l'enfer (énervé)",
+            "type": "troupe",
+            "élixir": 6,
+            "pv": 2400,
+            "atk_dps": 90,
+            "vitesse": "moyenne",
+            "portée": "moyenne",
+            "cibles": [
+                "sol",
+                "air"
+            ],
+            "capacités": [
+                {
+                    "clé": "ramping_damage",
+                    "description": "Les dégâts montent tant que la même cible est attaquée.",
+                    "params": {
+                        "min_dps": 90,
+                        "max_dps": 260,
+                        "ramp_time_sec": 5.0
+                    }
+                }
+            ]
+        },
+        {
+            "id": "alex_goblin_barrel",
+            "nom": "Alex",
+            "surnom": "Fût à gobelins",
+            "type": "sort",
+            "élixir": 3,
+            "pv": 0,
+            "atk_dps": 0,
+            "vitesse": "aucune",
+            "portée": "global",
+            "cibles": [
+                "tours"
+            ],
+            "capacités": [
+                {
+                    "clé": "spawn_goblins_on_tower",
+                    "description": "Lance un fût et fait apparaître des gobelins au contact d'une tour.",
+                    "params": {
+                        "goblins_spawned": 3,
+                        "goblin_pv": 350,
+                        "goblin_atk_dps": 80
+                    }
+                }
+            ]
+        },
+        {
+            "id": "raph_chinese_giant",
+            "nom": "Raph",
+            "surnom": "Géant chinois",
+            "type": "troupe",
+            "élixir": 8,
+            "pv": 4300,
+            "atk_dps": 240,
+            "vitesse": "lent",
+            "portée": "mêlée",
+            "cibles": [
+                "bâtiments"
+            ],
+            "capacités": [
+                {
+                    "clé": "invoquer_minichichis",
+                    "description": "Invoque des mini-chichis derrière lui régulièrement.",
+                    "params": {
+                        "spawn_interval_sec": 5.0,
+                        "chichi_count": 2,
+                        "chichi_pv": 220,
+                        "chichi_atk_dps": 55,
+                        "max_active": 6
+                    }
+                }
+            ]
+        }
+    ],
+    "tours": [
+        {
+            "id": "king_tower_tremblay",
+            "nom": "Tremblay",
+            "type_tour": "roi",
+            "pv": 4500,
+            "atk_dps": 180,
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ]
+        },
+        {
+            "id": "princess_tower_lisa",
+            "nom": "Lisa",
+            "type_tour": "princesse",
+            "pv": 2600,
+            "atk_dps": 140,
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ]
+        },
+        {
+            "id": "princess_tower_arthur",
+            "nom": "Arthur",
+            "type_tour": "princesse",
+            "pv": 2600,
+            "atk_dps": 140,
+            "portée": "longue",
+            "cibles": [
+                "sol",
+                "air"
+            ]
+        }
+    ]
+}
