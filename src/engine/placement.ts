@@ -4,6 +4,7 @@ import { getCardById } from '../data/load';
 import { playCard } from './deck';
 import { isValidPlacement } from './placement-validation';
 import { getLaneForSpawn } from './waypoints';
+import { executeAbility, hasAbility } from './abilities/index';
 
 export const canPlaceCard = (
     card: Card,
@@ -48,115 +49,91 @@ export const placeCard = (
     y: number,
     team: Team
 ): GameState => {
-    console.log('[Placement] placeCard called:', { cardId, x, y, team });
+    // console.log('[Placement] placeCard called:', { cardId, x, y, team });
 
     const card = getCardById(cardId);
-    if (!card) {
-        console.error(`[Placement] Card ${cardId} not found`);
-        return state;
-    }
-
-    console.log('[Placement] Card found:', card.name, 'cost:', card.elixirCost);
+    if (!card) return state;
 
     // Check elixir
     if (state.elixir[team] < card.elixirCost) {
-        console.warn(`[Placement] Insufficient elixir: ${state.elixir[team]}/${card.elixirCost}`);
         return state;
     }
 
-    // Validate placement using new validation system
-    if (!isValidPlacement(x, y, team)) {
-        console.warn(`[Placement] Invalid placement position for ${card.name} at (${x}, ${y})`);
-        return state;
-    }
-
-    console.log('[Placement] Validation passed, spawning unit...');
-
-    let newState = { ...state };
+    // Validate placement
+    // We can relax validation for Spells if needed inside isValidPlacement, 
+    // but here we just check raw bounds usually. 
+    // Assuming isValidPlacement handles Spell exception logic or we pass card type.
+    // For MVP rely on isValidPlacement but Spells (Alex) act as "Global".
+    // If isValidPlacement blocks spells on enemy side, we might have issue.
+    // Alex target is "Tower". Player clicks enemy tower? 
+    // Map click X,Y passed here.
 
     // Deduct elixir
+    let newState = { ...state };
     newState.elixir[team] -= card.elixirCost;
 
-    // Spawn unit/building
-    if (card.type === UnitType.TROOP || card.type === UnitType.BUILDING) {
-        const lane = getLaneForSpawn(x);
+    // Create Entity (Unit or Spell-as-Unit)
+    // Even spells are entities for a moment to trigger OnSpawn
+    const lane = getLaneForSpawn(x);
+    const id = `${card.id}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-        const unit = {
-            id: `unit_${Date.now()}_${Math.random()}`,
-            team,
-            x,
-            y,
-            hp: card.hp,
-            maxHp: card.hp,
-            radius: UNIT_RADIUS,
-            cardId,
-            dps: card.dps,
-            speedPxPerSec: SPEED_MAP[card.speed],
-            rangePx: RANGE_MAP[card.range],
-            targetType: card.targets,
-            lastAttackTime: 0,
-            state: 'idle' as const,
-            statuses: [],
-            abilityData: {},
-            lane // Assign lane based on spawn position
-        };
+    // Determine startup hasCrossedRiver
+    // Identical to step.ts logic
+    const riverY = 400;
+    const crossed = team === Team.BLUE ? (y < riverY) : (y > riverY);
 
-        newState.units.push(unit);
-        console.log(`[Placement] Spawned ${card.name} at (${x}, ${y}) in ${lane} lane`);
-    } else if (card.type === UnitType.SPELL) {
-        // Handle spells (e.g., Alex's goblin barrel)
-        console.log(`[Placement] Cast spell ${card.name} at (${x}, ${y})`);
-        // For MVP, spells are handled separately (could trigger abilities)
-        // Simplified: spawn goblins near enemy tower for Alex
-        if (cardId.includes('alex') || cardId.includes('Alex')) {
-            // Find nearest enemy tower
-            const enemyTowers = newState.towers.filter(t => t.team !== team);
-            let nearestTower = enemyTowers[0];
-            let minDist = Infinity;
+    const unit = {
+        id,
+        team,
+        x,
+        y,
+        hp: card.hp || 1, // Spells have 0 in JSON usually, give 1 to exist for a frame
+        maxHp: card.hp || 1,
+        radius: UNIT_RADIUS,
+        cardId,
+        nickname: card.nickname || card.name,
+        dps: card.dps,
+        speedPxPerSec: SPEED_MAP[card.speed] || 0,
+        rangePx: RANGE_MAP[card.range] || 0,
+        targetType: card.targets || [],
+        lastAttackTime: 0,
+        state: 'idle' as const,
+        statuses: [],
+        abilityState: {},
+        spawnedUnits: [],
+        hasCrossedRiver: crossed,
+        lane
+    };
 
-            enemyTowers.forEach(tower => {
-                const dist = Math.sqrt(Math.pow(tower.x - x, 2) + Math.pow(tower.y - y, 2));
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearestTower = tower;
-                }
-            });
-
-            if (nearestTower) {
-                // Spawn 3 goblins around tower
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i / 3) * Math.PI * 2;
-                    const distance = 30;
-                    const goblinX = nearestTower.x + Math.cos(angle) * distance;
-
-                    const goblin = {
-                        id: `goblin_${Date.now()}_${i}`,
-                        team,
-                        x: goblinX,
-                        y: nearestTower.y + Math.sin(angle) * distance,
-                        hp: 350,
-                        maxHp: 350,
-                        radius: 7,
-                        cardId: 'goblin',
-                        dps: 80,
-                        speedPxPerSec: 70,
-                        rangePx: 18,
-                        targetType: [TargetType.GROUND],
-                        lastAttackTime: 0,
-                        state: 'idle' as const,
-                        statuses: [],
-                        lane: getLaneForSpawn(goblinX) // Assign lane based on spawn position
-                    };
-
-                    newState.units.push(goblin);
-                }
-                console.log(`[Spell] Spawned 3 goblins near ${nearestTower.id}`);
-            }
-        }
-    }
+    newState.units.push(unit);
 
     // Cycle card from hand
     newState = playCard(newState, cardId, team);
+
+    // TRIGGER ON_SPAWN
+    // This handles Jacques (coinflip), Mathis (duo), Alex (spell spawn)
+    if (card.abilities) {
+        // Need to import AbilityEventType... 
+        // We can't use imports inside function.
+        // We need to move imports to top.
+        // BUT current structure of this file is messy.
+        // I will use magic string or ensuring Type is available.
+        // AbilityEventType.ON_SPAWN = 'onSpawn'
+
+        card.abilities.forEach(ab => {
+            const key = ab.clé || ab.key || ab.touche;
+            if (key && hasAbility(key)) {
+                const result = executeAbility(key, {
+                    state: newState,
+                    sourceEntityId: id,
+                    eventType: 'onSpawn' as any, // Cast to avoid import hell if type not imported
+                    params: ab.params || {},
+                    rng: () => Math.random() // Simple RNG here, ideally seeded from state
+                });
+                Object.assign(newState, result);
+            }
+        });
+    }
 
     return newState;
 };

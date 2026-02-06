@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Copy, Save } from 'lucide-react';
 import CardSlot from '../components/CardSlot';
+import CardArt from '../components/CardArt';
 import { getAllCards, getCardById } from '../data/load';
 
 const DecksScreen = () => {
@@ -155,20 +156,13 @@ const DecksScreen = () => {
                                                 : 'bg-slate-800/50 border-slate-600 border-dashed'}`}
                                     >
                                         {card ? (
-                                            <>
-                                                {/* Elixir Cost */}
-                                                <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400">
+                                            <div className="w-full h-full rounded-lg overflow-hidden relative">
+                                                <CardArt id={card.id} name={card.name} type={card.type} />
+                                                {/* Elixir Cost Overlay */}
+                                                <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400 z-10">
                                                     <span className="text-white font-bold text-[10px]">{card.elixirCost}</span>
                                                 </div>
-                                                {/* Icon */}
-                                                <span className="text-3xl mb-1">
-                                                    {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
-                                                </span>
-                                                {/* Name */}
-                                                <span className="text-[8px] text-center font-bold text-white leading-tight px-1">
-                                                    {card.name}
-                                                </span>
-                                            </>
+                                            </div>
                                         ) : (
                                             <span className="text-slate-500 text-2xl font-bold">{i + 1}</span>
                                         )}
@@ -214,23 +208,17 @@ const DecksScreen = () => {
                                         </div>
                                     )}
 
+                                    <div className="w-full h-full rounded-lg overflow-hidden relative">
+                                        <CardArt id={card.id} name={card.name} type={card.type} />
+                                    </div>
+
                                     {/* Elixir Cost */}
-                                    <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400">
+                                    <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400 z-10">
                                         <span className="text-white font-bold text-[10px]">{card.elixirCost}</span>
                                     </div>
 
-                                    {/* Icon */}
-                                    <span className="text-3xl mb-1">
-                                        {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
-                                    </span>
-
-                                    {/* Name */}
-                                    <span className="text-[8px] text-center font-bold text-white leading-tight px-1">
-                                        {card.name}
-                                    </span>
-
                                     {/* Mini Stats */}
-                                    <div className="absolute bottom-1 w-full px-1 flex justify-between text-[7px] text-white/70">
+                                    <div className="absolute bottom-1 w-full px-1 flex justify-between text-[7px] text-white/70 z-10 bg-black/40">
                                         <span>❤️{card.hp}</span>
                                         <span>⚔️{card.dps}</span>
                                     </div>

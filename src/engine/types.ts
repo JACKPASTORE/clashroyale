@@ -100,6 +100,7 @@ export interface Entity {
 
 export interface Unit extends Entity {
     cardId: string; // Ref to Card stats
+    nickname?: string; // Runtime nickname for visual/debug
     dps: number;
     speedPxPerSec: number;
     rangePx: number;
@@ -111,7 +112,8 @@ export interface Unit extends Entity {
 
     // ABILITIES SYSTEM
     statuses: StatusEffect[];
-    abilityData?: any; // card-specific runtime data (hit counters, charge distance, etc.)
+    abilityState: Record<string, any>; // Generic store for ability counters/timers
+    hasCrossedRiver: boolean;
     spawnedUnits?: string[]; // IDs of units spawned by this unit (minibots, goblins, etc.)
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../engine/types';
 import { getCardById } from '../data/load';
+import CardArt from './CardArt';
 
 interface HandProps {
     handIds: string[];
@@ -54,12 +55,9 @@ const Hand: React.FC<HandProps> = ({ handIds, selectedCardId, onSelectCard, elix
                                 <span className="text-white font-bold text-xs">{card.elixirCost}</span>
                             </div>
 
-                            {/* Simple Visual */}
+                            {/* Card Art */}
                             <div className="w-[90%] h-[60%] bg-gray-600 rounded flex items-center justify-center mb-1 overflow-hidden">
-                                {/* Placeholder Icon based on type */}
-                                <span className="text-3xl">
-                                    {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
-                                </span>
+                                <CardArt id={card.id} name={card.name} type={card.type} />
                             </div>
 
                             {/* Name */}

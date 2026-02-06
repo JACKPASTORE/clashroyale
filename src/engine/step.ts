@@ -1,15 +1,15 @@
 import { GameState, Team, Unit, Tower, Entity, TargetType, UnitType, AbilityEventType } from './types';
 import { HIT_COOLDOWN, ELIXIR_REGEN_RATE, ELIXIR_MAX } from './constants';
 import { getCardById } from '../data/load';
-import { updateStatuses, isStunned, getEffectiveSpeed } from './status';
+import { updateStatuses, isStunned, getEffectiveSpeed, getEffectiveAttackSpeed } from './status';
 import { executeAbility, hasAbility } from './abilities/index';
 import { createRNG } from './rng';
 import { getNextWaypoint } from './waypoints';
 import { botThink } from './bot';
 import { placeCard } from './placement';
 
-// ABILITIES FLAG: Set to false for MVP stability (solo local mode)
-const ENABLE_ABILITIES = false;
+// ABILITIES ENABLED
+const ENABLE_ABILITIES = true;
 
 const getDistance = (e1: Entity, e2: Entity) => {
     return Math.sqrt(Math.pow(e2.x - e1.x, 2) + Math.pow(e2.y - e1.y, 2));
@@ -21,25 +21,61 @@ const getEnemies = (state: GameState, myTeam: Team): Entity[] => {
     return [...units, ...towers];
 };
 
+const RIVER_Y = 400; // Approx river position
+
+const hasCrossedLine = (unit: Unit): boolean => {
+    // Blue spawns > 400. Crosses if Y < 400.
+    // Red spawns < 400. Crosses if Y > 400.
+    if (unit.team === Team.BLUE) return unit.y < RIVER_Y;
+    if (unit.team === Team.RED) return unit.y > RIVER_Y;
+    return false;
+};
+
+const isSameSide = (e1: Entity, e2: Entity): boolean => {
+    // Check if both are on same side of river
+    const e1Side = e1.y > RIVER_Y ? 'bottom' : 'top';
+    const e2Side = e2.y > RIVER_Y ? 'bottom' : 'top';
+    return e1Side === e2Side;
+};
+
 const canTarget = (attacker: Unit | Tower, target: Entity) => {
-    // If attacker is a Tower, it hits Ground & Air by default (simple MVP)
-    // If attacker is Unit, check its targetType vs target's nature (Unit or Tower)
+    if ('type' in attacker && attacker.type === 'king') return true;
 
-    if ('type' in attacker && attacker.type === 'king') return true; // Kings hit all? MVP simplification
-
-    if ('cardId' in attacker) { // It's a Unit
+    if ('cardId' in attacker) { // Unit
         const u = attacker as Unit;
-        // Simple logic: if target is Tower, it's ground. If Unit, could be ground/air.
-        // MVP: assume all Units are Ground unless specified Air. All Towers are Ground.
-        // Normalized data: targetType is Array.
 
-        // Check if attacker targets BUILDINGS_ONLY
+        // River Logic
+        // Attacker can target IF:
+        // 1. They are on same side. (e.g. Defender placed on your side vs Enemy unit on your side)
+        // 2. OR Attacker has crossed river (Invading unit attacking deep tower/unit)
+        // 3. Exception: Ranged units can attack across river?
+        // Prompt says: "Une unité ne peut PAS attaquer une cible de l’autre côté de la rivière tant qu’elle n’a pas franchi la rivière."
+        // Meaning: Even ranged units MUST cross river?
+        // "David ne peut pas attaquer à travers rivière tant qu’il ne l’a pas franchie." -> YES.
+
+        // Wait, "sameSideRiver" OR "attacker.hasCrossedRiver".
+        // If attacker crossed river, he is on enemy side. Target likely on enemy side.
+        // If target is on enemy side (relative to attacker spawn), and attacker hasn't crossed:
+        // Attacker (Blue) at Y=450. Target (Red) at Y=350.
+        // Blue hasn't crossed. Cannot attack Target?
+        // Yes, that matches rules.
+
+        // However, if Red Unit crosses to Blue side (Y=450). Blue Unit at 450 can attack it (Same Side).
+
+        const mySide = u.team === Team.BLUE ? (u.y > RIVER_Y) : (u.y < RIVER_Y); // My 'home' side
+        // Actually simplified test:
+        // Condition: isSameSide(attacker, target) || attacker.hasCrossedRiver
+        // Let's implement exactly that logic.
+
+        if (!isSameSide(u, target) && !u.hasCrossedRiver) {
+            return false;
+        }
+
         const targetsBuildings = u.targetType.includes(TargetType.BUILDINGS_ONLY);
-        const isBuilding = ('type' in target) || (target as any).type === UnitType.BUILDING; // Tower or Building Unit
+        const isBuilding = ('type' in target) || (target as any).type === UnitType.BUILDING;
 
         if (targetsBuildings && !isBuilding) return false;
 
-        // Check Ground/Air validity (Skipped for extreme MVP simplicity, assuming hit = hit)
         return true;
     }
 
@@ -54,30 +90,33 @@ export const step = (state: GameState, dt: number): GameState => {
 
     // Setup RNG for this frame
     const rng = createRNG(newState.rngState);
-    newState.rngState = Math.floor(rng() * 0x7fffffff); // Update for next frame
+    newState.rngState = Math.floor(rng() * 0x7fffffff);
 
     // 1. Elixir Regen
-    // dt is in seconds. 
     newState.elixir[Team.BLUE] = Math.min(ELIXIR_MAX, newState.elixir[Team.BLUE] + ELIXIR_REGEN_RATE * dt);
     newState.elixir[Team.RED] = Math.min(ELIXIR_MAX, newState.elixir[Team.RED] + ELIXIR_REGEN_RATE * dt);
     newState.time += dt;
 
-    // 1.5. BOT AI - Think and play cards
+    // 1.5. BOT AI
     if (newState.bot.enabled && newState.time >= newState.bot.lastThinkTime + newState.bot.nextThinkDelay) {
         const botAction = botThink(newState);
         if (botAction) {
-            // Bot places card
             newState = placeCard(newState, botAction.cardId, botAction.x, botAction.y, Team.RED);
         }
-        // Reset cooldown with jitter (0.7-1.3s)
         newState.bot.lastThinkTime = newState.time;
         newState.bot.nextThinkDelay = 0.7 + Math.random() * 0.6;
     }
 
-    // 2. Unit Logic (Move & Attack)
+    // 2. Unit Logic
     newState.units = newState.units.map(unit => {
-        // If dead, skip (filtered later)
         if (unit.hp <= 0) return unit;
+
+        // Check River Crossing
+        if (!unit.hasCrossedRiver) {
+            // Update status only if false to avoid toggling back (once crossed, always crossed? Rule implies "invading")
+            // Usually "hasCrossed" is a persistent flag for behavior.
+            unit.hasCrossedRiver = hasCrossedLine(unit);
+        }
 
         // === ABILITIES: Update statuses ===
         if (!unit.statuses) unit.statuses = [];
@@ -86,14 +125,13 @@ export const step = (state: GameState, dt: number): GameState => {
         // === ABILITIES: Check if stunned ===
         if (isStunned(unit)) {
             unit.state = 'idle';
-            return unit; // Cannot move or attack
+            return unit;
         }
 
         const enemies = getEnemies(state, unit.team);
         let target: Entity | null = null;
         let minDist = Infinity;
 
-        // Find closest valid enemy
         for (const e of enemies) {
             if (!canTarget(unit, e)) continue;
             const d = getDistance(unit, e);
@@ -103,24 +141,37 @@ export const step = (state: GameState, dt: number): GameState => {
             }
         }
 
-        // Update Unit State
-        unit.targetId = target?.id; // Track current target
+        unit.targetId = target?.id;
 
         if (target) {
             if (minDist <= unit.rangePx) {
                 // ATTACK
                 unit.state = 'attacking';
-                // Check cooldown (simplified: using timestamp)
-                if (now - unit.lastAttackTime > HIT_COOLDOWN * 1000) {
-                    // Deal Damage
-                    unit.lastAttackTime = now;
-                    const damage = unit.dps * HIT_COOLDOWN;
 
-                    // Apply base damage
-                    if ('cardId' in target) { // Unit
+                // Cooldown logic
+                // Should use cooldown based on Rage?
+                // Standard cooldown 0.5s? Or unit specific?
+                // Simple engine: everyone hits every 0.5s with damage = dps * 0.5.
+                // Rage affects *cadence*.
+
+                const baseCooldown = HIT_COOLDOWN * 1000;
+                const effectiveCooldown = getEffectiveAttackSpeed(unit, baseCooldown);
+
+                if (now - unit.lastAttackTime > effectiveCooldown) {
+                    unit.lastAttackTime = now;
+                    // Calculate Damage
+                    // Rage increases attack speed (lower cooldown), so DPS increases naturally.
+                    // But damage PER HIT is constant?
+                    // "Rage: attaque plus vite".
+                    // So we deal same damage, but more often.
+
+                    const damage = unit.dps * HIT_COOLDOWN; // Base damage per "standard tick"
+
+                    // Deal Damage
+                    if ('cardId' in target) {
                         const targetUnit = newState.units.find(u => u.id === target!.id);
                         if (targetUnit) targetUnit.hp -= damage;
-                    } else { // Tower
+                    } else {
                         const targetTower = newState.towers.find(t => t.id === target!.id);
                         if (targetTower) targetTower.hp -= damage;
                     }
@@ -141,7 +192,6 @@ export const step = (state: GameState, dt: number): GameState => {
                                         dt,
                                         rng: () => rng()
                                     });
-                                    // Merge result back
                                     Object.assign(newState, result);
                                 }
                             });
@@ -149,16 +199,13 @@ export const step = (state: GameState, dt: number): GameState => {
                     }
                 }
             } else {
-                // MOVE: Follow waypoints if available, otherwise move to target
+                // MOVE
                 unit.state = 'moving';
-
-                // Check for next waypoint
                 const nextWaypoint = getNextWaypoint(unit.x, unit.y, unit.lane, unit.team);
 
                 let targetX = target.x;
                 let targetY = target.y;
 
-                // If waypoint exists and not near enemy, follow waypoint
                 if (nextWaypoint && minDist > unit.rangePx * 3) {
                     const distToWaypoint = Math.hypot(nextWaypoint.x - unit.x, nextWaypoint.y - unit.y);
                     if (distToWaypoint > 10) {
@@ -171,24 +218,30 @@ export const step = (state: GameState, dt: number): GameState => {
                 const dy = targetY - unit.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                // === ABILITIES: Apply speed multipliers ===
+                // Speed
                 const effectiveSpeed = getEffectiveSpeed(unit);
                 const moveDist = effectiveSpeed * dt;
-                unit.x += (dx / dist) * moveDist;
-                unit.y += (dy / dist) * moveDist;
+
+                if (dist > 0) {
+                    unit.x += (dx / dist) * moveDist;
+                    unit.y += (dy / dist) * moveDist;
+                }
             }
         } else {
-            // No target? Move forward (Bridge logic simplified)
-            // Blue goes UP (y decreases), Red goes DOWN (y increases)
-            // Ideally they go to bridge first, then tower. 
-            // MVP: Just go straight to enemy King tower Y.
+            // No target? Move forward
             unit.state = 'moving';
-            const targetX = unit.team === Team.BLUE ? (unit.x < 240 ? 80 : 400) : (unit.x < 240 ? 80 : 400); // Bias to lanes
 
-            // Simple lane logic: Move towards bridge Y (400) first?
-            // Let's just move purely vertically for MVP fallback
-            const moveDist = unit.speedPxPerSec * dt;
-            unit.y += unit.team === Team.BLUE ? -moveDist : moveDist;
+            // Bridge/Tower navigation logic simplified
+            // Bias towards bridge center X (80 or 400 ish? No map is width 480?)
+            // Map 480. Bridges at e.g. 100 and 380?
+            // "unit.lane" defines it.
+
+            // Just basic movement up/down for now
+            const moveDist = unit.speedPxPerSec * dt; // Base speed, should use effective?
+            const effectiveSpeed = getEffectiveSpeed(unit);
+            const dist = effectiveSpeed * dt;
+
+            unit.y += unit.team === Team.BLUE ? -dist : dist;
         }
 
         // === ABILITIES: Trigger onTick ===
@@ -206,7 +259,6 @@ export const step = (state: GameState, dt: number): GameState => {
                             dt,
                             rng: () => rng()
                         });
-                        // Merge result back
                         Object.assign(newState, result);
                     }
                 });
@@ -216,12 +268,10 @@ export const step = (state: GameState, dt: number): GameState => {
         return unit;
     });
 
-    // 3. Tower Logic (Attack closest unit)
+    // 3. Tower Logic
     newState.towers.forEach(tower => {
         if (tower.hp <= 0) return;
 
-        // Find closest enemy unit
-        // Towers don't move, just shoot.
         const enemyUnits = newState.units.filter(u => u.team !== tower.team);
         let target = null;
         let minDist = Infinity;
@@ -243,11 +293,8 @@ export const step = (state: GameState, dt: number): GameState => {
         }
     });
 
-    // 4. Cleanup Dead Entities & Check Win
+    // 4. Cleanup
     newState.units = newState.units.filter(u => u.hp > 0);
-
-    // Check Towers
-    // If King dies, game over.
     const blueKing = newState.towers.find(t => t.team === Team.BLUE && t.type === 'king');
     const redKing = newState.towers.find(t => t.team === Team.RED && t.type === 'king');
 
@@ -259,8 +306,6 @@ export const step = (state: GameState, dt: number): GameState => {
         newState.status = 'game_over';
         newState.winner = Team.BLUE;
     }
-
-    // Remove dead towers from array (visuals should handle explosions)
     newState.towers = newState.towers.filter(t => t.hp > 0);
 
     return newState;
