@@ -19,7 +19,9 @@ const normalizeSpeed = (s: string): Speed => {
     return Speed.MEDIUM; // Default
 };
 
-const normalizeRange = (r: string): Range => {
+const normalizeRange = (r: string, id?: string): Range => {
+    if (id === 'alex_goblin_barrel') return Range.GLOBAL; // Explicit global range for Alex
+
     const lower = r?.toLowerCase() || '';
     if (lower.includes('mêlée') || lower.includes('melee')) return Range.MELEE;
     if (lower.includes('courte')) return Range.SHORT;
@@ -43,6 +45,52 @@ const normalizeTargets = (targets: string[]): TargetType[] => {
     return res.length ? res : [TargetType.NONE];
 };
 
+const getVisuals = (id: string, type: UnitType) => {
+    // Default fallback
+    const defaults = {
+        icon: '/assets/cards/placeholder.png',
+        model: '/assets/units/placeholder.png',
+        color: '#aaaaaa'
+    };
+
+    // Specific mapping for Albert School characters
+    // The user should place images named like 'david_icon.png' / 'david_model.png' in public/assets/
+
+    const overrides: Record<string, any> = {
+        'david_archer_stylet': { color: '#3b82f6', baseName: 'david' },
+        'jack_cavalier': { color: '#f59e0b', baseName: 'jack' },
+        'sarah_princess': { color: '#ec4899', baseName: 'sarah' },
+        'diego_knight': { color: '#3b82f6', baseName: 'diego' },
+        'timsit_elixir_dragon': { color: '#a855f7', baseName: 'timsit' },
+        'jausseaud_money_bowler': { color: '#10b981', baseName: 'jausseaud' },
+        'alexis_grandpa_wizard': { color: '#ef4444', baseName: 'alexis' },
+        'raph_chinese_giant': { color: '#f97316', baseName: 'raph' },
+        'gabriel_math_dart_goblin': { color: '#22c55e', baseName: 'gabriel' },
+        'nael_biker_sapper': { color: '#facc15', baseName: 'nael' },
+        'sacha_control_agent': { color: '#6366f1', baseName: 'sacha' },
+        'mathieu_joker': { color: '#8b5cf6', baseName: 'mathieu' },
+        'tao_charging_prince': { color: '#f59e0b', baseName: 'tao' },
+        'isaac_casino_tower': { color: '#f43f5e', baseName: 'isaac' }, // Building
+        'arbre_habonneau': { color: '#166534', baseName: 'habonneau' }, // Building
+        'baptiste_tesla': { color: '#0ea5e9', baseName: 'baptiste' }, // Building
+        'alex_goblin_barrel': { color: '#10b981', baseName: 'alex' } // Spell
+    };
+
+    const override = overrides[id];
+    if (override) {
+        return {
+            icon: `/assets/cards/${override.baseName}_icon.png`,
+            model: `/assets/units/${override.baseName}_model.png`,
+            color: override.color
+        };
+    }
+
+    // Generic fallbacks by type if no specific ID match
+    if (type === UnitType.SPELL) return { ...defaults, color: '#a855f7' };
+    if (type === UnitType.BUILDING) return { ...defaults, color: '#f59e0b' };
+    return { ...defaults, color: '#3b82f6' };
+};
+
 export const loadCards = (): Card[] => {
     return rawData.cartes.map((raw: any) => {
         // Robustly handle varying field names (plage vs portée vs gamme, surnom vs nickname)
@@ -58,9 +106,10 @@ export const loadCards = (): Card[] => {
             hp: raw.pv,
             dps: raw.atk_dps,
             speed: normalizeSpeed(raw.vitesse),
-            range: normalizeRange(rawRange),
+            range: normalizeRange(rawRange, raw.id),
             targets: normalizeTargets(raw.cibles),
-            abilities: raw.capacités || []
+            abilities: raw.capacités || [],
+            visuals: getVisuals(raw.id, normalizeType(raw.type))
         };
     });
 };

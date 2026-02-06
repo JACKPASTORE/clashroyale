@@ -1,7 +1,75 @@
 import React from 'react';
 import { Crown, Shield } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Team } from '../../engine/types';
+import { getCardById } from '../../data/load';
 
+const UnitRenderer = ({ unit }) => {
+    const card = getCardById(unit.cardId);
+    if (!card) return null;
+
+    const visualX = (unit.x / 480) * 100;
+    const visualY = (unit.y / 800) * 100 + 8; // Offset match
+    const hpPercent = (unit.hp / unit.maxHp) * 100;
+    const barColor = hpPercent > 60 ? '#22c55e' : hpPercent > 30 ? '#eab308' : '#ef4444';
+
+    // Determine visuals
+    // If no model url, use fallback color circle
+    const hasModel = card.visuals && card.visuals.model && !card.visuals.model.includes('placeholder');
+
+    return (
+        <motion.div
+            layout
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{
+                scale: 1,
+                opacity: 1,
+                x: "-50%",
+                y: "-50%",
+                top: `${visualY}%`,
+                left: `${visualX}%`
+            }}
+            transition={{ duration: 0.2 }} // Smooth movement
+            className="absolute z-50 pointer-events-none"
+        >
+            {/* HP Bar */}
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-1 bg-black/50 rounded-full overflow-hidden">
+                <div
+                    className="h-full transition-all duration-300"
+                    style={{
+                        width: `${hpPercent}%`,
+                        backgroundColor: barColor
+                    }}
+                />
+            </div>
+
+            {/* Visual Representation */}
+            {hasModel ? (
+                <div className={`w-12 h-12 relative flex items-center justify-center`}>
+                    {/* Sprite Placeholder - In future use <img> */}
+                    <img
+                        src={card.visuals.model}
+                        alt={card.name}
+                        className={`w-full h-full object-contain drop-shadow-lg ${unit.state === 'attacking' ? 'animate-pulse' : ''}`}
+                        style={{
+                            filter: unit.team === Team.RED ? 'hue-rotate(180deg)' : 'none'
+                        }}
+                    />
+                </div>
+            ) : (
+                <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold shadow-sm`}
+                    style={{
+                        backgroundColor: card.visuals.color,
+                        borderColor: unit.team === Team.BLUE ? '#1e3a8a' : '#7f1d1d'
+                    }}
+                >
+                    {unit.team === Team.BLUE ? '🔵' : '🔴'}
+                </div>
+            )}
+        </motion.div>
+    );
+};
 
 const ArenaLayout = ({ towers = [], units = [] }) => {
     // Find specific towers
@@ -214,44 +282,9 @@ const ArenaLayout = ({ towers = [], units = [] }) => {
             </div>
 
             {/* --- PLACED UNITS (Global Overlay) --- */}
-            {units.map(unit => {
-                // Map logical coords (480x800) to visual coords
-                const visualX = (unit.x / 480) * 100; // percentage
-                const visualY = (unit.y / 800) * 100 + 8; // percentage, offset for top padding
-
-                const hpPercent = (unit.hp / unit.maxHp) * 100;
-                const barColor = hpPercent > 60 ? '#22c55e' : hpPercent > 30 ? '#eab308' : '#ef4444';
-
-                return (
-                    <div
-                        key={unit.id}
-                        className="absolute z-50"
-                        style={{
-                            left: `${visualX}%`,
-                            top: `${visualY}%`,
-                            transform: 'translate(-50%, -50%)'
-                        }}
-                    >
-                        {/* HP Bar */}
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-1 bg-black/50 rounded-full overflow-hidden">
-                            <div
-                                className="h-full transition-all duration-300"
-                                style={{
-                                    width: `${hpPercent}%`,
-                                    backgroundColor: barColor
-                                }}
-                            />
-                        </div>
-
-                        {/* Unit Circle */}
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold
-                            ${unit.team === Team.BLUE ? 'bg-blue-400 border-blue-900 text-white' : 'bg-red-400 border-red-900 text-white'}`}
-                        >
-                            🔥
-                        </div>
-                    </div>
-                );
-            })}
+            {units.map(unit => (
+                <UnitRenderer key={unit.id} unit={unit} />
+            ))}
 
         </div>
     );

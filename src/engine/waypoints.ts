@@ -75,6 +75,31 @@ export const getNextWaypoint = (
     lane: Lane,
     team: Team
 ): Waypoint | null => {
+    // 1. Force Bridge Alignment in River Zone
+    // If we are near river vertically but far from bridge horizontally, we MUST go to bridge.
+    const BRIDGE_X = lane === 'left' ? LEFT_BRIDGE_X : RIGHT_BRIDGE_X;
+    const RIVER_ZONE_TOP = 320;
+    const RIVER_ZONE_BOTTOM = 480;
+
+    const inRiverZone = currentY > RIVER_ZONE_TOP && currentY < RIVER_ZONE_BOTTOM;
+    const misalignment = Math.abs(currentX - BRIDGE_X);
+
+    if (inRiverZone && misalignment > 20) {
+        // We are in river band but not on bridge!
+        // Target the bridge entry/exit closest to us vertically?
+        // Actually, just target the Bridge Center Y (400) to force alignment
+        // But better to target the 'Safe' side entry.
+        if (team === Team.BLUE) {
+            // Going Up. If below bridge, target entry (450). If above (how?), target exit (350).
+            // Just return strict waypoint.
+            return { x: BRIDGE_X, y: currentY > BRIDGE_Y ? 420 : 380, lane, team };
+        } else {
+            // Going Down (Red).
+            return { x: BRIDGE_X, y: currentY < BRIDGE_Y ? 380 : 420, lane, team };
+        }
+    }
+
+    // 2. Standard Waypoint Progression
     const waypoints = team === Team.BLUE ? BLUE_WAYPOINTS : RED_WAYPOINTS;
     const laneWaypoints = waypoints.filter(wp => wp.lane === lane);
 

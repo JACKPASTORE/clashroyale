@@ -35,7 +35,14 @@ const canTarget = (attacker: Unit | Tower, target: Entity) => {
 
         // Check if attacker targets BUILDINGS_ONLY
         const targetsBuildings = u.targetType.includes(TargetType.BUILDINGS_ONLY);
-        const isBuilding = ('type' in target) || (target as any).type === UnitType.BUILDING; // Tower or Building Unit
+
+        let isBuilding = false;
+        if ('type' in target) { // Tower
+            isBuilding = true;
+        } else { // Unit
+            const targetCard = getCardById((target as Unit).cardId);
+            isBuilding = targetCard?.type === UnitType.BUILDING;
+        }
 
         if (targetsBuildings && !isBuilding) return false;
 
@@ -74,10 +81,50 @@ export const step = (state: GameState, dt: number): GameState => {
         newState.bot.nextThinkDelay = 0.7 + Math.random() * 0.6;
     }
 
+    const newSpawns: Unit[] = [];
+
     // 2. Unit Logic (Move & Attack)
     newState.units = newState.units.map(unit => {
         // If dead, skip (filtered later)
         if (unit.hp <= 0) return unit;
+
+        // === SPECIAL ABILITY: Barrel Delay Logic ===
+        if (unit.abilityData?.isBarrel) {
+            if (now >= unit.abilityData.spawnTime + 2000) {
+                // Explode!
+                unit.hp = 0; // Kill barrel
+
+                // Spawn 3 goblins
+                for (let i = 0; i < 3; i++) {
+                    const angle = (i / 3) * Math.PI * 2;
+                    const distance = 30;
+                    const goblinX = unit.x + Math.cos(angle) * distance;
+                    const goblinY = unit.y + Math.sin(angle) * distance;
+
+                    const goblin: Unit = {
+                        id: `goblin_${now}_${i}_${Math.random()}`,
+                        team: unit.team,
+                        x: goblinX,
+                        y: goblinY,
+                        hp: 350,
+                        maxHp: 350,
+                        radius: 7, // Small
+                        cardId: 'alex_goblin_barrel', // Use Alex visuals
+                        dps: 80,
+                        speedPxPerSec: 70, // Fast
+                        rangePx: 18, // Melee
+                        targetType: [TargetType.GROUND],
+                        lastAttackTime: 0,
+                        state: 'idle',
+                        statuses: [],
+                        lane: unit.lane, // Inherit lane
+                        abilityData: {}
+                    };
+                    newSpawns.push(goblin);
+                }
+            }
+            return unit; // Skip normal logic for barrel
+        }
 
         // === ABILITIES: Update statuses ===
         if (!unit.statuses) unit.statuses = [];
@@ -89,50 +136,73 @@ export const step = (state: GameState, dt: number): GameState => {
             return unit; // Cannot move or attack
         }
 
-        const enemies = getEnemies(state, unit.team);
+        // === 1. TARGETING (Sticky Aggro) ===
         let target: Entity | null = null;
         let minDist = Infinity;
 
-        // Find closest valid enemy
-        for (const e of enemies) {
-            if (!canTarget(unit, e)) continue;
-            const d = getDistance(unit, e);
-            if (d < minDist) {
-                minDist = d;
-                target = e;
+        // A. Check current locked target
+        if (unit.targetId) {
+            const allEntities: Entity[] = [...newState.units, ...newState.towers];
+            const existing = allEntities.find(e => e.id === unit.targetId);
+
+            // Validate locked target (must be alive and valid)
+            if (existing && existing.hp > 0 && canTarget(unit, existing)) {
+                target = existing;
+                minDist = getDistance(unit, target);
+            } else {
+                unit.targetId = undefined; // Lost target
             }
         }
 
-        // Update Unit State
-        unit.targetId = target?.id; // Track current target
+        // B. Scan for new target if none locked
+        if (!target) {
+            const enemies = getEnemies(state, unit.team); // Use 'state' for consistent snapshot or 'newState' for immediate
+            // Find closest valid enemy
+            for (const e of enemies) {
+                if (!canTarget(unit, e)) continue;
+                const d = getDistance(unit, e);
+                if (d < minDist) {
+                    minDist = d;
+                    target = e;
+                }
+            }
+            if (target) {
+                // Check aggro range? For now, infinite aggro if valid target found? 
+                // Usually aggro range is ~5 tiles (150px) to notice, but map wide for win cons.
+                // MVP: Infinite vision for simplicity (matches previous logic)
+                unit.targetId = target.id;
+            }
+        }
 
+        // === 2. ACTION LOGIC ===
         if (target) {
             if (minDist <= unit.rangePx) {
-                // ATTACK
+                // --- ATTACK ---
                 unit.state = 'attacking';
-                // Check cooldown (simplified: using timestamp)
+
+                // Static units turn/attack but don't move. 
+                // Attack logic matches previous...
                 if (now - unit.lastAttackTime > HIT_COOLDOWN * 1000) {
-                    // Deal Damage
                     unit.lastAttackTime = now;
                     const damage = unit.dps * HIT_COOLDOWN;
 
-                    // Apply base damage
+                    // Apply damage
                     if ('cardId' in target) { // Unit
-                        const targetUnit = newState.units.find(u => u.id === target!.id);
-                        if (targetUnit) targetUnit.hp -= damage;
+                        const u = newState.units.find(u => u.id === target!.id);
+                        if (u) u.hp -= damage;
                     } else { // Tower
-                        const targetTower = newState.towers.find(t => t.id === target!.id);
-                        if (targetTower) targetTower.hp -= damage;
+                        const t = newState.towers.find(t => t.id === target!.id);
+                        if (t) t.hp -= damage;
                     }
 
-                    // === ABILITIES: Trigger onAttackHit ===
+                    // OnAttackHit trigger...
                     if (ENABLE_ABILITIES) {
                         const card = getCardById(unit.cardId);
                         if (card?.abilities) {
                             card.abilities.forEach(ab => {
                                 const key = ab.clé || ab.key || ab.touche;
                                 if (key && hasAbility(key)) {
-                                    const result = executeAbility(key, {
+                                    executeAbility(key, {
                                         state: newState,
                                         sourceEntityId: unit.id,
                                         targetEntityId: target!.id,
@@ -141,54 +211,69 @@ export const step = (state: GameState, dt: number): GameState => {
                                         dt,
                                         rng: () => rng()
                                     });
-                                    // Merge result back
-                                    Object.assign(newState, result);
                                 }
                             });
                         }
                     }
                 }
             } else {
-                // MOVE: Follow waypoints if available, otherwise move to target
-                unit.state = 'moving';
-
-                // Check for next waypoint
-                const nextWaypoint = getNextWaypoint(unit.x, unit.y, unit.lane, unit.team);
-
-                let targetX = target.x;
-                let targetY = target.y;
-
-                // If waypoint exists and not near enemy, follow waypoint
-                if (nextWaypoint && minDist > unit.rangePx * 3) {
-                    const distToWaypoint = Math.hypot(nextWaypoint.x - unit.x, nextWaypoint.y - unit.y);
-                    if (distToWaypoint > 10) {
-                        targetX = nextWaypoint.x;
-                        targetY = nextWaypoint.y;
-                    }
+                // --- MOVE towards target ---
+                if (unit.speedPxPerSec <= 0) {
+                    unit.state = 'idle'; // Building cannot move
+                    return unit;
                 }
 
-                const dx = targetX - unit.x;
-                const dy = targetY - unit.y;
+                unit.state = 'moving';
+
+                // Waypoint / Pathfinding Logic
+                const nextWaypoint = getNextWaypoint(unit.x, unit.y, unit.lane, unit.team);
+                let destX = target.x;
+                let destY = target.y;
+
+                // Priority: Waypoint > Direct Target
+                if (nextWaypoint) {
+                    destX = nextWaypoint.x;
+                    destY = nextWaypoint.y;
+                }
+
+                // Move calculation
+                const dx = destX - unit.x;
+                const dy = destY - unit.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                // === ABILITIES: Apply speed multipliers ===
-                const effectiveSpeed = getEffectiveSpeed(unit);
-                const moveDist = effectiveSpeed * dt;
-                unit.x += (dx / dist) * moveDist;
-                unit.y += (dy / dist) * moveDist;
+                if (dist > 0) {
+                    const effectiveSpeed = getEffectiveSpeed(unit);
+                    const moveDist = effectiveSpeed * dt;
+                    unit.x += (dx / dist) * moveDist;
+                    unit.y += (dy / dist) * moveDist;
+                }
             }
         } else {
-            // No target? Move forward (Bridge logic simplified)
-            // Blue goes UP (y decreases), Red goes DOWN (y increases)
-            // Ideally they go to bridge first, then tower. 
-            // MVP: Just go straight to enemy King tower Y.
-            unit.state = 'moving';
-            const targetX = unit.team === Team.BLUE ? (unit.x < 240 ? 80 : 400) : (unit.x < 240 ? 80 : 400); // Bias to lanes
+            // --- NO TARGET: Move logic (Capture buildings going to bridge) ---
+            if (unit.speedPxPerSec <= 0) {
+                unit.state = 'idle';
+                return unit;
+            }
 
-            // Simple lane logic: Move towards bridge Y (400) first?
-            // Let's just move purely vertically for MVP fallback
-            const moveDist = unit.speedPxPerSec * dt;
-            unit.y += unit.team === Team.BLUE ? -moveDist : moveDist;
+            unit.state = 'moving';
+            const nextWaypoint = getNextWaypoint(unit.x, unit.y, unit.lane, unit.team);
+
+            if (nextWaypoint) {
+                // Follow lane
+                const dx = nextWaypoint.x - unit.x;
+                const dy = nextWaypoint.y - unit.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const moveDist = getEffectiveSpeed(unit) * dt;
+                if (dist > 0) {
+                    unit.x += (dx / dist) * moveDist;
+                    unit.y += (dy / dist) * moveDist;
+                }
+            } else {
+                // End of path -> Move to Enemy King Y? (Fallback)
+                // Blue needs to go UP (< y), Red DOWN (> y)
+                const moveDist = getEffectiveSpeed(unit) * dt;
+                unit.y += unit.team === Team.BLUE ? -moveDist : moveDist;
+            }
         }
 
         // === ABILITIES: Trigger onTick ===
@@ -215,6 +300,11 @@ export const step = (state: GameState, dt: number): GameState => {
 
         return unit;
     });
+
+    // Add newly spawned units (e.g., from barrel)
+    if (newSpawns.length > 0) {
+        newState.units.push(...newSpawns);
+    }
 
     // 3. Tower Logic (Attack closest unit)
     newState.towers.forEach(tower => {

@@ -41,14 +41,15 @@ export const spawn_goblins_on_tower = (ctx: AbilityContext): GameState => {
             hp: 350,
             maxHp: 350,
             radius: HIT_RADIUS_SMALL,
-            cardId: 'goblin',
+            cardId: 'alex_goblin_barrel', // Use Alex's visuals for the goblins for now
             dps: 80,
             speedPxPerSec: 70, // Fast
             rangePx: 18, // Melee
             targetType: [],
             lastAttackTime: Date.now(),
             state: 'idle' as const,
-            statuses: []
+            statuses: [],
+            lane: 'left' // Default lane placeholder
         };
 
         state.units.push(goblin);

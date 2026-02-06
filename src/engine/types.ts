@@ -81,6 +81,11 @@ export interface Card {
     targets: TargetType[];
     // Raw abilities kept for potential future use or UI display
     abilities?: any[];
+    visuals: {
+        icon: string;
+        model: string;
+        color: string;
+    };
 }
 
 export enum Team {

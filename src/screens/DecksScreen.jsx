@@ -149,25 +149,35 @@ const DecksScreen = () => {
                                     <div
                                         key={i}
                                         onClick={() => card && removeCardFromDeck(card.id)}
-                                        className={`aspect-[3/4] rounded-lg border-2 relative flex flex-col items-center justify-center transition-all
+                                        className={`aspect-[3/4] rounded-lg border-2 relative flex flex-col items-center justify-center transition-all bg-slate-800
                                             ${card
-                                                ? 'bg-slate-700 border-yellow-500 cursor-pointer hover:border-red-500'
-                                                : 'bg-slate-800/50 border-slate-600 border-dashed'}`}
+                                                ? 'border-yellow-500 cursor-pointer hover:border-red-500 bg-slate-700'
+                                                : 'border-slate-600 border-dashed opacity-50'}`}
                                     >
                                         {card ? (
                                             <>
+                                                {/* Visual Icon */}
+                                                <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-black' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
+                                                    {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
+                                                        <img src={card.visuals.icon} className="w-full h-full object-cover opacity-90" alt={card.name} />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-3xl">
+                                                            {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
+                                                        </div>
+                                                    )}
+                                                </div>
+
                                                 {/* Elixir Cost */}
-                                                <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400">
+                                                <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400 z-10">
                                                     <span className="text-white font-bold text-[10px]">{card.elixirCost}</span>
                                                 </div>
-                                                {/* Icon */}
-                                                <span className="text-3xl mb-1">
-                                                    {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
-                                                </span>
-                                                {/* Name */}
-                                                <span className="text-[8px] text-center font-bold text-white leading-tight px-1">
-                                                    {card.name}
-                                                </span>
+
+                                                {/* Name Overlay */}
+                                                <div className="absolute bottom-0 w-full bg-black/70 py-1 z-10">
+                                                    <span className="text-[8px] text-center font-bold text-white leading-tight px-1 block">
+                                                        {card.name}
+                                                    </span>
+                                                </div>
                                             </>
                                         ) : (
                                             <span className="text-slate-500 text-2xl font-bold">{i + 1}</span>
@@ -207,30 +217,38 @@ const DecksScreen = () => {
                                             ? 'bg-green-900/30 border-green-500 opacity-60'
                                             : 'bg-slate-700 border-slate-500 hover:border-yellow-400'}`}
                                 >
+                                    {/* Visual Icon */}
+                                    <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-black' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
+                                        {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
+                                            <img src={card.visuals.icon} className="w-full h-full object-cover opacity-90" alt={card.name} />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-3xl">
+                                                {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {/* Check badge if in deck */}
                                     {inDeck && (
-                                        <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow border border-white">
+                                        <div className="absolute top-1 right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow border border-white z-20">
                                             <span className="text-white font-bold text-xs">✓</span>
                                         </div>
                                     )}
 
                                     {/* Elixir Cost */}
-                                    <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400">
+                                    <div className="absolute top-1 left-1 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center shadow border border-purple-400 z-20">
                                         <span className="text-white font-bold text-[10px]">{card.elixirCost}</span>
                                     </div>
 
-                                    {/* Icon */}
-                                    <span className="text-3xl mb-1">
-                                        {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
-                                    </span>
-
-                                    {/* Name */}
-                                    <span className="text-[8px] text-center font-bold text-white leading-tight px-1">
-                                        {card.name}
-                                    </span>
+                                    {/* Name Overlay */}
+                                    <div className="absolute bottom-4 w-full bg-black/60 py-0.5 z-10">
+                                        <span className="text-[8px] text-center font-bold text-white leading-tight px-1 block">
+                                            {card.name}
+                                        </span>
+                                    </div>
 
                                     {/* Mini Stats */}
-                                    <div className="absolute bottom-1 w-full px-1 flex justify-between text-[7px] text-white/70">
+                                    <div className="absolute bottom-1 w-full px-1 flex justify-between text-[7px] text-white/90 z-20 font-black drop-shadow-md">
                                         <span>❤️{card.hp}</span>
                                         <span>⚔️{card.dps}</span>
                                     </div>

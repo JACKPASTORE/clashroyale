@@ -35,6 +35,16 @@ const BattleScreen = ({ onExit }) => {
         gameStateRef.current = gameState;
     }, [gameState]);
 
+    // Clear selection if card no longer in hand
+    useEffect(() => {
+        if (selectedCardId && gameState) {
+            const inHand = gameState.deck[Team.BLUE].hand.includes(selectedCardId);
+            if (!inHand) {
+                setSelectedCardId(null);
+            }
+        }
+    }, [gameState, selectedCardId]);
+
     // Init
     useEffect(() => {
         const deck = getSavedDeck();
@@ -80,6 +90,13 @@ const BattleScreen = ({ onExit }) => {
     const handleArenaTap = (e) => {
         if (!gameState || !selectedCardId) return;
 
+        // Verify card is still in hand
+        if (!gameState.deck[Team.BLUE].hand.includes(selectedCardId)) {
+            console.warn('[Battle] Selected card no longer in hand');
+            setSelectedCardId(null);
+            return;
+        }
+
         const rect = e.currentTarget.getBoundingClientRect();
         const x = (e.clientX - rect.left) * (480 / rect.width);
         const y = (e.clientY - rect.top) * (800 / rect.height);
@@ -90,13 +107,20 @@ const BattleScreen = ({ onExit }) => {
             return;
         }
 
-        setGameState(prev => {
-            if (!prev) return null;
-            return placeCard(prev, selectedCardId, x, y, Team.BLUE);
-        });
-
+        // Use functional update with captured cardId
+        const cardToPlay = selectedCardId;
         setSelectedCardId(null);
         setMousePos(null);
+
+        setGameState(prev => {
+            if (!prev) return null;
+            // Double-check card still in hand at time of state update
+            if (!prev.deck[Team.BLUE].hand.includes(cardToPlay)) {
+                console.warn('[Battle] Card was removed before placement');
+                return prev;
+            }
+            return placeCard(prev, cardToPlay, x, y, Team.BLUE);
+        });
     };
 
     // Track mouse position for ghost preview
@@ -321,9 +345,9 @@ const BattleScreen = ({ onExit }) => {
 
                     {/* RIGHT: Active Hand (4 Cards) */}
                     <div className="flex-1 flex gap-2 justify-end items-end h-full">
-                        {gameState.deck[Team.BLUE].hand.map(cardId => (
+                        {gameState.deck[Team.BLUE].hand.map((cardId, idx) => (
                             <CardSlotComponent
-                                key={cardId}
+                                key={`hand-${idx}`}
                                 cardId={cardId}
                                 isSelected={selectedCardId === cardId}
                                 onSelect={() => setSelectedCardId(cardId)}
@@ -345,12 +369,19 @@ const CardSlotComponent = ({ cardId, isNext = false, isSelected = false, onSelec
     const canAfford = elixir >= card.elixirCost;
     const emoji = card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️';
 
+    const handleClick = (e) => {
+        e.stopPropagation();
+        if (!isNext && canAfford && onSelect) {
+            onSelect();
+        }
+    };
+
     return (
         <motion.div
             whileTap={!isNext && canAfford ? { scale: 0.9 } : {}}
-            animate={!isNext ? { y: isSelected ? -8 : [0, -2, 0] } : {}}
-            transition={{ duration: 3, repeat: isSelected ? 0 : Infinity, ease: "easeInOut", delay: Math.random() }}
-            onClick={!isNext && canAfford ? onSelect : undefined}
+            animate={{ y: isSelected ? -8 : 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={handleClick}
             className={`relative ${isNext ? 'w-10 h-14 opacity-90' : 'w-16 h-20'} rounded-lg border-2 shadow-lg flex items-center justify-center overflow-hidden
                 ${!isNext && canAfford ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}
                 ${isSelected ? 'border-yellow-400 shadow-yellow-400/50' : 'border-black'}
@@ -358,11 +389,15 @@ const CardSlotComponent = ({ cardId, isNext = false, isSelected = false, onSelec
                 bg-[#4b5563]`}
         >
             {/* Placeholder Card Art */}
-            <div className="w-full h-full bg-[#9ca3af] relative flex flex-col items-center justify-center">
-                {/* Emoji Icon */}
-                <div className="flex-1 flex items-center justify-center">
-                    <span className="text-2xl drop-shadow-md opacity-80">{emoji}</span>
-                </div>
+            <div className={`w-full h-full relative flex flex-col items-center justify-center ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-black' : 'bg-[#9ca3af]'}`}>
+                {/* Visual Icon */}
+                {card.visuals && card.visuals.icon && !card.visuals.icon.includes('placeholder') ? (
+                    <img src={card.visuals.icon} className="absolute inset-0 w-full h-full object-cover opacity-90" alt={card.name} />
+                ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                        <span className="text-2xl drop-shadow-md opacity-80">{emoji}</span>
+                    </div>
+                )}
 
                 {/* Card Name */}
                 {!isNext && (

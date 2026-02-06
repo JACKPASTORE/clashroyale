@@ -1,4 +1,4 @@
-import { Team } from './types';
+import { Team, Card, Range } from './types';
 
 // Arena dimensions
 export const ARENA_WIDTH = 480;
@@ -18,12 +18,18 @@ export const RIVER_MAX_Y = RIVER_CENTER_Y + RIVER_HALF_HEIGHT + RIVER_BUFFER; //
  * @param x - X coordinate (0-480)
  * @param y - Y coordinate (0-800)
  * @param team - Team attempting placement
+ * @param card - Optional card being placed (to check for global range)
  * @returns true if placement is valid, false otherwise
  */
-export const isValidPlacement = (x: number, y: number, team: Team): boolean => {
+export const isValidPlacement = (x: number, y: number, team: Team, card?: Card): boolean => {
     // Check arena bounds
     if (x < 0 || x > ARENA_WIDTH || y < 0 || y > ARENA_HEIGHT) {
         return false;
+    }
+
+    // Allow GLOBAL range cards (spells) anywhere
+    if (card && card.range === Range.GLOBAL) {
+        return true;
     }
 
     // Check river zone + buffer (no placement allowed)

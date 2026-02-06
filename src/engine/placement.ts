@@ -108,50 +108,32 @@ export const placeCard = (
         console.log(`[Placement] Cast spell ${card.name} at (${x}, ${y})`);
         // For MVP, spells are handled separately (could trigger abilities)
         // Simplified: spawn goblins near enemy tower for Alex
+        // Simplified: spawn transparent/flying barrel which waits 2s then spawns goblins
         if (cardId.includes('alex') || cardId.includes('Alex')) {
-            // Find nearest enemy tower
-            const enemyTowers = newState.towers.filter(t => t.team !== team);
-            let nearestTower = enemyTowers[0];
-            let minDist = Infinity;
-
-            enemyTowers.forEach(tower => {
-                const dist = Math.sqrt(Math.pow(tower.x - x, 2) + Math.pow(tower.y - y, 2));
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearestTower = tower;
-                }
-            });
-
-            if (nearestTower) {
-                // Spawn 3 goblins around tower
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i / 3) * Math.PI * 2;
-                    const distance = 30;
-                    const goblinX = nearestTower.x + Math.cos(angle) * distance;
-
-                    const goblin = {
-                        id: `goblin_${Date.now()}_${i}`,
-                        team,
-                        x: goblinX,
-                        y: nearestTower.y + Math.sin(angle) * distance,
-                        hp: 350,
-                        maxHp: 350,
-                        radius: 7,
-                        cardId: 'goblin',
-                        dps: 80,
-                        speedPxPerSec: 70,
-                        rangePx: 18,
-                        targetType: [TargetType.GROUND],
-                        lastAttackTime: 0,
-                        state: 'idle' as const,
-                        statuses: [],
-                        lane: getLaneForSpawn(goblinX) // Assign lane based on spawn position
-                    };
-
-                    newState.units.push(goblin);
-                }
-                console.log(`[Spell] Spawned 3 goblins near ${nearestTower.id}`);
-            }
+            const barrel = {
+                id: `barrel_${Date.now()}`,
+                team,
+                x,
+                y,
+                hp: 100, // Dummy HP that won't be hit
+                maxHp: 100,
+                radius: 0, // No collision
+                cardId: 'alex_goblin_barrel',
+                dps: 0,
+                speedPxPerSec: 0, // Stationary (visual delay)
+                rangePx: 0,
+                targetType: [], // Untargetable
+                lastAttackTime: 0,
+                state: 'idle' as const,
+                statuses: [],
+                abilityData: {
+                    isBarrel: true,
+                    spawnTime: Date.now()
+                },
+                lane: getLaneForSpawn(x)
+            };
+            newState.units.push(barrel);
+            console.log(`[Spell] Cast Alex Barrel at (${x}, ${y}) - waiting 2s`);
         }
     }
 
