@@ -81,28 +81,89 @@ export const placeCard = (
     if (card.type === UnitType.TROOP || card.type === UnitType.BUILDING) {
         const lane = getLaneForSpawn(x);
 
-        const unit = {
-            id: `unit_${Date.now()}_${Math.random()}`,
-            team,
-            x,
-            y,
-            hp: card.hp,
-            maxHp: card.hp,
-            radius: UNIT_RADIUS,
-            cardId,
-            dps: card.dps,
-            speedPxPerSec: SPEED_MAP[card.speed],
-            rangePx: RANGE_MAP[card.range],
-            targetType: card.targets,
-            lastAttackTime: 0,
-            state: 'idle' as const,
-            statuses: [],
-            abilityData: {},
-            lane // Assign lane based on spawn position
-        };
+        // Check for Duo Unit Ability (Mathis & Enzo)
+        const duoAbility = card.abilities.find(a => a.clé === 'duo_unit' || a.key === 'duo_unit');
 
-        newState.units.push(unit);
-        console.log(`[Placement] Spawned ${card.name} at (${x}, ${y}) in ${lane} lane`);
+        if (duoAbility) {
+            // === DUO SPAWN LOGIN ===
+            console.log('[Placement] Spawning Duo Unit:', card.name);
+            const params = duoAbility.params || {};
+
+            // Direction offset based on team (Blue goes up -Y, Red goes down +Y)
+            // Front unit is closer to bridge/enemy
+            const yDir = team === Team.BLUE ? -1 : 1;
+            const separation = 25; // Pixel distance between front and back
+
+            // 1. FRONT UNIT (Mathis - Tank)
+            const frontUnit = {
+                id: `unit_${Date.now()}_front_${Math.random()}`,
+                team,
+                x: x,
+                y: y + (yDir * separation), // In front
+                hp: card.hp * (params.front_hp_ratio || 0.7),
+                maxHp: card.hp * (params.front_hp_ratio || 0.7),
+                radius: UNIT_RADIUS,
+                cardId, // Share same card ID for base stats
+                dps: card.dps * 0.4, // Split DPS? Or give mathis less? Let's say he does 40%
+                speedPxPerSec: SPEED_MAP[card.speed],
+                rangePx: RANGE_MAP[Range.MELEE], // Force Melee
+                targetType: card.targets,
+                lastAttackTime: 0,
+                state: 'idle' as const,
+                statuses: [],
+                abilityData: {},
+                lane
+            };
+
+            // 2. BACK UNIT (Enzo - Ranged)
+            const backUnit = {
+                id: `unit_${Date.now()}_back_${Math.random()}`,
+                team,
+                x: x,
+                y: y - (yDir * separation), // Behind
+                hp: card.hp * (params.back_hp_ratio || 0.3),
+                maxHp: card.hp * (params.back_hp_ratio || 0.3),
+                radius: UNIT_RADIUS,
+                cardId,
+                dps: card.dps * 0.6, // Enzo does more dmg
+                speedPxPerSec: SPEED_MAP[card.speed],
+                rangePx: RANGE_MAP[Range.MEDIUM], // Force Ranged
+                targetType: card.targets,
+                lastAttackTime: 0,
+                state: 'idle' as const,
+                statuses: [],
+                abilityData: {},
+                lane
+            };
+
+            newState.units.push(frontUnit, backUnit);
+            console.log(`[Placement] Spawned Duo: Front (${frontUnit.hp}hp) & Back (${backUnit.hp}hp)`);
+
+        } else {
+            // === STANDARD SINGLE SPAWN ===
+            const unit = {
+                id: `unit_${Date.now()}_${Math.random()}`,
+                team,
+                x,
+                y,
+                hp: card.hp,
+                maxHp: card.hp,
+                radius: UNIT_RADIUS,
+                cardId,
+                dps: card.dps,
+                speedPxPerSec: SPEED_MAP[card.speed],
+                rangePx: RANGE_MAP[card.range],
+                targetType: card.targets,
+                lastAttackTime: 0,
+                state: 'idle' as const,
+                statuses: [],
+                abilityData: {},
+                lane // Assign lane based on spawn position
+            };
+
+            newState.units.push(unit);
+            console.log(`[Placement] Spawned ${card.name} at (${x}, ${y}) in ${lane} lane`);
+        }
     } else if (card.type === UnitType.SPELL) {
         // Handle spells (e.g., Alex's goblin barrel)
         console.log(`[Placement] Cast spell ${card.name} at (${x}, ${y})`);

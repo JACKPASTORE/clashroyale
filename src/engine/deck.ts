@@ -35,19 +35,25 @@ export const playCard = (state: GameState, cardId: string, team: Team): GameStat
     console.log(`[Deck] ${team} playing ${cardId}`);
     console.log(`[Deck] Before - Hand: [${teamDeck.hand}], Queue: [${teamDeck.drawPile}]`);
 
-    // 1. Remove card from hand
+    // 1. Find index of played card
     const cardIndex = teamDeck.hand.indexOf(cardId);
     if (cardIndex === -1) {
         console.error(`[Deck] Card ${cardId} not in hand!`);
         return state;
     }
-    teamDeck.hand.splice(cardIndex, 1);
 
-    // 2. Draw from front of queue (if hand < 4)
-    if (teamDeck.hand.length < 4 && teamDeck.drawPile.length > 0) {
-        const drawn = teamDeck.drawPile.shift()!; // Remove from front
-        teamDeck.hand.push(drawn);
-        console.log(`[Deck] Drew ${drawn} from queue`);
+    // 2. Cycle Logic: Replace played card specifically at its slot
+    // If there is a card in the queue, it takes this slot.
+    // If queue is empty, slot becomes empty (remove it).
+
+    if (teamDeck.drawPile.length > 0) {
+        const nextInQueue = teamDeck.drawPile.shift()!;
+        teamDeck.hand[cardIndex] = nextInQueue; // Replace in-place
+        console.log(`[Deck] Slot ${cardIndex} filled by ${nextInQueue}`);
+    } else {
+        // No cards left to draw? Remove this slot.
+        teamDeck.hand.splice(cardIndex, 1);
+        console.log(`[Deck] Slot ${cardIndex} empty (no cards in queue)`);
     }
 
     // 3. Add played card to BACK of queue

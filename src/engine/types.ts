@@ -85,6 +85,9 @@ export interface Card {
         icon: string;
         model: string;
         color: string;
+        projectile?: string; // e.g., 'arrow', 'fireball'
+        projectileSpeed?: number;
+        rotationOffset?: number; // Degrees to adjust image
     };
 }
 
@@ -128,9 +131,29 @@ export interface Tower extends Entity {
     targetId?: string;
 }
 
+export interface Projectile {
+    id: string;
+    ownerId: string; // Unit who fired it
+    team: Team;
+    targetId: string; // Homing projectile
+    x: number;
+    y: number;
+    speed: number;
+    damage: number;
+    visual: string; // 'arrow', 'fireball', 'rock', 'axe'
+    startX: number;
+    startY: number;
+    progress: number; // 0 to 1
+    targetType: TargetType[];
+    aoeRadius?: number; // For splash damage
+    angle?: number; // Current rotation in radians
+    rotationOffset?: number; // Visual correction in degrees
+}
+
 export interface GameState {
     towers: Tower[];
     units: Unit[];
+    projectiles: Projectile[]; // New projectile array
     elixir: {
         [Team.BLUE]: number;
         [Team.RED]: number;

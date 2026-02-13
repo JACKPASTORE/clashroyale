@@ -55,6 +55,8 @@ const BattleScreen = ({ onExit }) => {
             return;
         }
         const initialState = createInitialState(deck);
+        // Ensure projectiles array exists if init.ts missed it (Hotfix safety)
+        if (!initialState.projectiles) initialState.projectiles = [];
         console.log('[BattleScreen] Initial state:', initialState);
         setGameState(initialState);
     }, [onExit]);
@@ -195,6 +197,7 @@ const BattleScreen = ({ onExit }) => {
                 <ArenaLayout
                     towers={gameState.towers}
                     units={gameState.units}
+                    projectiles={gameState.projectiles} // Pass projectiles
                 />
 
                 {/* Ghost Preview Circle */}

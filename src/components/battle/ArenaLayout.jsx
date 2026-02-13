@@ -71,7 +71,7 @@ const UnitRenderer = ({ unit }) => {
     );
 };
 
-const ArenaLayout = ({ towers = [], units = [] }) => {
+const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
     // Find specific towers
     const redKing = towers.find(t => t.team === Team.RED && t.type === 'king');
     const redLeft = towers.find(t => t.team === Team.RED && t.type === 'princess' && t.x < 240);
@@ -285,6 +285,69 @@ const ArenaLayout = ({ towers = [], units = [] }) => {
             {units.map(unit => (
                 <UnitRenderer key={unit.id} unit={unit} />
             ))}
+
+            {/* --- PROJECTILES --- */}
+            {projectiles && projectiles.map(proj => {
+                // Calculate visual position (convert logic coords to %)
+                const visualX = (proj.x / 480) * 100;
+                const visualY = (proj.y / 800) * 100 + 8; // Offset match
+
+                // Use calculated angle or default to 0
+                // Add +90 deg (PI/2) because default arrow/image usually points UP or RIGHT.
+                // If arrow image points UP, and atan2 gives angle from X axis (RIGHT), we need adjustment.
+                // Let's assume image points UP (standard icon). 
+                // If angle is 0 (Right), and image points UP, we need to rotate 90 deg (PI/2)? No -> -90 (-PI/2).
+                // Let's assume standard 'arrow' points UP.
+                // Actually the Fleche Arc image looks like a spear pointing diagonally top-left?
+                // Let's try standard rotation first.
+                // Emoji 🏹 points top-right roughly. Fireball 🔥 is round.
+
+                // Let's just use the angle directly and tweak if needed.
+                // CSS rotate accepts radians if we use 'rad' unit, or degrees using 'deg'.
+                // proj.angle is in radians.
+                // We likely need an offset based on the image orientation.
+                // Assuming standard "Right-facing" sprite = 0 rad.
+                // If sprite is Up-facing, subtract 90deg.
+
+                // CSS rotate accepts radians if we use 'rad' unit, or degrees using 'deg'.
+                // proj.angle is in radians.
+                // proj.rotationOffset is in degrees (optional)
+
+                const angleRad = proj.angle || 0;
+                const offsetDeg = proj.rotationOffset || 0;
+
+                // Combine: convert rad to deg for simpler CSS string or vice versa
+                const angleDeg = angleRad * (180 / Math.PI);
+                const totalRotation = angleDeg + offsetDeg;
+
+
+                return (
+                    <div
+                        key={proj.id}
+                        className="absolute z-[60] pointer-events-none flex items-center justify-center drop-shadow-md"
+                        style={{
+                            left: `${visualX}%`,
+                            top: `${visualY}%`,
+                            transform: `translate(-50%, -50%) rotate(${totalRotation}deg)`,
+                            transition: 'top 0.05s linear, left 0.05s linear',
+                            width: '32px', // Larger for visibility
+                            height: '32px'
+                        }}
+                    >
+                        {proj.visual.startsWith('/') || proj.visual.startsWith('http') ? (
+                            <img
+                                src={proj.visual}
+                                alt="projectile"
+                                className="w-full h-full object-contain"
+                            />
+                        ) : (
+                            <span className="text-xl">
+                                {proj.visual === 'fireball' ? '🔥' : '🏹'}
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
 
         </div>
     );

@@ -8,54 +8,23 @@ import { createInitialDeckState } from './deck';
 
 export const createInitialState = (playerDeckIds: string[]): GameState => {
     // Setup Towers
-    const towers: Tower[] = [
-        // --- RED TEAM (Top) ---
-        // Princess Left
-        {
-            id: 'red_p_l', team: Team.RED, type: 'princess',
-            x: 80, y: 120, hp: PRINCESS_TOWER_HP, maxHp: PRINCESS_TOWER_HP,
-            radius: TOWER_RADIUS, dps: 140, rangePx: 250, lastAttackTime: 0
-        },
-        // Princess Right
-        {
-            id: 'red_p_r', team: Team.RED, type: 'princess',
-            x: ARENA_WIDTH - 80, y: 120, hp: PRINCESS_TOWER_HP, maxHp: PRINCESS_TOWER_HP,
-            radius: TOWER_RADIUS, dps: 140, rangePx: 250, lastAttackTime: 0
-        },
-        // King
-        {
-            id: 'red_king', team: Team.RED, type: 'king',
-            x: ARENA_WIDTH / 2, y: 50, hp: KING_TOWER_HP, maxHp: KING_TOWER_HP,
-            radius: TOWER_RADIUS + 10, dps: 180, rangePx: 250, lastAttackTime: 0
-        },
-
-        // --- BLUE TEAM (Bottom) ---
-        // Princess Left
-        {
-            id: 'blue_p_l', team: Team.BLUE, type: 'princess',
-            x: 80, y: ARENA_HEIGHT - 120, hp: PRINCESS_TOWER_HP, maxHp: PRINCESS_TOWER_HP,
-            radius: TOWER_RADIUS, dps: 140, rangePx: 250, lastAttackTime: 0
-        },
-        // Princess Right
-        {
-            id: 'blue_p_r', team: Team.BLUE, type: 'princess',
-            x: ARENA_WIDTH - 80, y: ARENA_HEIGHT - 120, hp: PRINCESS_TOWER_HP, maxHp: PRINCESS_TOWER_HP,
-            radius: TOWER_RADIUS, dps: 140, rangePx: 250, lastAttackTime: 0
-        },
-        // King
-        {
-            id: 'blue_king', team: Team.BLUE, type: 'king',
-            x: ARENA_WIDTH / 2, y: ARENA_HEIGHT - 50, hp: KING_TOWER_HP, maxHp: KING_TOWER_HP,
-            radius: TOWER_RADIUS + 10, dps: 180, rangePx: 250, lastAttackTime: 0
-        }
-    ];
-
     return {
-        towers,
+        towers: [
+            // BLUE TEAM (Player) - Bottom
+            { id: 'blue_king', team: Team.BLUE, type: 'king', x: 240, y: 750, hp: 4000, maxHp: 4000, radius: 25, dps: 120, rangePx: 180, lastAttackTime: 0 },
+            { id: 'blue_left', team: Team.BLUE, type: 'princess', x: 80, y: 650, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+            { id: 'blue_right', team: Team.BLUE, type: 'princess', x: 400, y: 650, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+
+            // RED TEAM (Enemy) - Top
+            { id: 'red_king', team: Team.RED, type: 'king', x: 240, y: 50, hp: 4000, maxHp: 4000, radius: 25, dps: 120, rangePx: 180, lastAttackTime: 0 },
+            { id: 'red_left', team: Team.RED, type: 'princess', x: 80, y: 150, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+            { id: 'red_right', team: Team.RED, type: 'princess', x: 400, y: 150, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+        ],
         units: [],
+        projectiles: [], // Start with empty projectiles
         elixir: {
             [Team.BLUE]: 5,
-            [Team.RED]: 5
+            [Team.RED]: 5,
         },
         deck: createInitialDeckState(playerDeckIds),
         status: 'playing',

@@ -28,6 +28,7 @@ const normalizeRange = (r: string, id?: string): Range => {
     if (lower.includes('très_longue')) return Range.VERY_LONG;
     if (lower.includes('longue')) return Range.LONG;
     if (lower.includes('moyenne')) return Range.MEDIUM;
+    if (lower.includes('mixte')) return Range.MEDIUM; // Treat mixed as ranged for MVP (Enzo throwing)
     if (lower.includes('global')) return Range.GLOBAL;
     if (lower.includes('aucune')) return Range.NONE;
     return Range.MELEE; // Default
@@ -50,16 +51,28 @@ const getVisuals = (id: string, type: UnitType) => {
     const defaults = {
         icon: '/assets/cards/placeholder.png',
         model: '/assets/units/placeholder.png',
-        color: '#aaaaaa'
+        color: '#aaaaaa',
+        projectile: undefined as string | undefined,
+        rotationOffset: 0 // Default rotation offset
     };
 
     // Specific mapping for Albert School characters
     // The user should place images named like 'david_icon.png' / 'david_model.png' in public/assets/
 
     const overrides: Record<string, any> = {
-        'david_archer_stylet': { color: '#3b82f6', baseName: 'david' },
+        'david_archer_stylet': {
+            color: '#3b82f6',
+            baseName: 'david',
+            projectile: '/assets/projectile/Fleche Arc Illustration 3D.avif',
+            rotationOffset: 45 // Adjust if image is diagonal
+        },
         'jack_cavalier': { color: '#f59e0b', baseName: 'jack' },
-        'sarah_princess': { color: '#ec4899', baseName: 'sarah' },
+        'sarah_princess': {
+            color: '#ec4899',
+            baseName: 'sarah',
+            projectile: 'arrow',
+            rotationOffset: -90 // Standard arrow usually points Up
+        },
         'diego_knight': { color: '#3b82f6', baseName: 'diego' },
         'timsit_elixir_dragon': { color: '#a855f7', baseName: 'timsit' },
         'jausseaud_money_bowler': { color: '#10b981', baseName: 'jausseaud' },
@@ -73,6 +86,12 @@ const getVisuals = (id: string, type: UnitType) => {
         'isaac_casino_tower': { color: '#f43f5e', baseName: 'isaac' }, // Building
         'arbre_habonneau': { color: '#166534', baseName: 'habonneau' }, // Building
         'baptiste_tesla': { color: '#0ea5e9', baseName: 'baptiste' }, // Building
+        'mathis_enzo_tricksters': {
+            color: '#3b82f6',
+            baseName: 'mathis_enzo',
+            projectile: '/assets/projectile/Bruschetta.jpeg',
+            rotationOffset: 0 // Bruschetta might spin or be round
+        },
         'alex_goblin_barrel': { color: '#10b981', baseName: 'alex' } // Spell
     };
 
@@ -81,7 +100,9 @@ const getVisuals = (id: string, type: UnitType) => {
         return {
             icon: `/assets/cards/${override.baseName}_icon.png`,
             model: `/assets/units/${override.baseName}_model.png`,
-            color: override.color
+            color: override.color,
+            projectile: override.projectile,
+            rotationOffset: override.rotationOffset
         };
     }
 
@@ -97,6 +118,8 @@ export const loadCards = (): Card[] => {
         const rawRange = raw.plage || raw.portée || raw.gamme || 'moyenne';
         const rawNickname = raw.nickname || raw.surnom || '';
 
+        const visuals = getVisuals(raw.id, normalizeType(raw.type));
+
         return {
             id: raw.id,
             name: raw.nom,
@@ -109,7 +132,15 @@ export const loadCards = (): Card[] => {
             range: normalizeRange(rawRange, raw.id),
             targets: normalizeTargets(raw.cibles),
             abilities: raw.capacités || [],
-            visuals: getVisuals(raw.id, normalizeType(raw.type))
+            visuals: {
+                ...visuals,
+                // Auto-assign projectile for ranged units IF not already manually overridden
+                projectile: visuals.projectile
+                    ? visuals.projectile
+                    : (normalizeRange(rawRange) !== Range.MELEE ? 'arrow' : undefined),
+                projectileSpeed: 500,
+                rotationOffset: visuals.rotationOffset
+            }
         };
     });
 };
