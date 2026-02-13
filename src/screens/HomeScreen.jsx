@@ -139,11 +139,20 @@ const HomeScreen = (props) => {
                 {/* BOTTOM CONTENT: Battle Button Cluster */}
                 <div className="mt-auto mb-28 w-full flex flex-col items-center pointer-events-auto">
                     {/* ... (Same Battle Cluster code) ... */}
-                    <div className="mb-[-10px] z-20 bg-[#594030] border-[3px] border-[#3E2B20] px-3 py-1 rounded-xl shadow-[0_4px_6px_rgba(0,0,0,0.5)] relative flex items-center">
-                        <Crown className="text-[#3B82F6] fill-[#3B82F6] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)] mr-2" size={20} />
-                        <div className="w-32 h-3 bg-[#3E2B20] rounded-full overflow-hidden shadow-inner border border-[#ffffff10]">
-                            <div className="bg-gradient-to-r from-[#3B82F6] to-[#60A5FA] h-full w-[20%] shadow-[0_0_5px_#3B82F6]"></div>
+                    <div className="mb-[-10px] z-20 bg-[#594030] border-[3px] border-[#3E2B20] px-3 py-1 rounded-xl shadow-[0_4px_6px_rgba(0,0,0,0.5)] relative flex items-center space-x-4">
+                        <div className="flex items-center">
+                            <Crown className="text-[#3B82F6] fill-[#3B82F6] drop-shadow-[0_2px_0_rgba(0,0,0,0.5)] mr-2" size={20} />
+                            <div className="w-32 h-3 bg-[#3E2B20] rounded-full overflow-hidden shadow-inner border border-[#ffffff10]">
+                                <div className="bg-gradient-to-r from-[#3B82F6] to-[#60A5FA] h-full w-[20%] shadow-[0_0_5px_#3B82F6]"></div>
+                            </div>
                         </div>
+                        {/* 1vs1 Button */}
+                        <button
+                            onClick={() => props.onOpenLobby && props.onOpenLobby()}
+                            className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-[10px] font-black uppercase px-2 py-1 rounded border-b-2 border-[#1E3A8A] active:border-b-0 active:translate-y-0.5 transition-all"
+                        >
+                            1 vs 1
+                        </button>
                     </div>
 
                     <div className="flex items-center justify-center w-full px-2 space-x-2">

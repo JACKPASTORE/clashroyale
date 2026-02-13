@@ -52,8 +52,9 @@ const getVisuals = (id: string, type: UnitType) => {
         icon: '/assets/cards/placeholder.png',
         model: '/assets/units/placeholder.png',
         color: '#aaaaaa',
-        projectile: undefined as string | undefined,
-        rotationOffset: 0 // Default rotation offset
+        projectile: undefined as string | undefined, // Fixed duplicate
+        rotationOffset: 0, // Default rotation offset
+        spawnSound: '/assets/sfx/deploy.mp3' // Default spawn sound
     };
 
     // Specific mapping for Albert School characters
@@ -64,35 +65,38 @@ const getVisuals = (id: string, type: UnitType) => {
             color: '#3b82f6',
             baseName: 'david',
             projectile: '/assets/projectile/Fleche Arc Illustration 3D.avif',
-            rotationOffset: 45 // Adjust if image is diagonal
+            rotationOffset: 45,
+            spawnSound: '/assets/sfx/david_spawn.mp3'
         },
-        'jack_cavalier': { color: '#f59e0b', baseName: 'jack' },
+        'jack_cavalier': { color: '#f59e0b', baseName: 'jack', spawnSound: '/assets/sfx/jack_spawn.mp3' },
         'sarah_princess': {
             color: '#ec4899',
             baseName: 'sarah',
             projectile: 'arrow',
-            rotationOffset: -90 // Standard arrow usually points Up
+            rotationOffset: -90,
+            spawnSound: '/assets/sfx/sarah_spawn.mp3'
         },
-        'diego_knight': { color: '#3b82f6', baseName: 'diego' },
-        'timsit_elixir_dragon': { color: '#a855f7', baseName: 'timsit' },
-        'jausseaud_money_bowler': { color: '#10b981', baseName: 'jausseaud' },
-        'alexis_grandpa_wizard': { color: '#ef4444', baseName: 'alexis' },
-        'raph_chinese_giant': { color: '#f97316', baseName: 'raph' },
-        'gabriel_math_dart_goblin': { color: '#22c55e', baseName: 'gabriel' },
-        'nael_biker_sapper': { color: '#facc15', baseName: 'nael' },
-        'sacha_control_agent': { color: '#6366f1', baseName: 'sacha' },
-        'mathieu_joker': { color: '#8b5cf6', baseName: 'mathieu' },
-        'tao_charging_prince': { color: '#f59e0b', baseName: 'tao' },
-        'isaac_casino_tower': { color: '#f43f5e', baseName: 'isaac' }, // Building
-        'arbre_habonneau': { color: '#166534', baseName: 'habonneau' }, // Building
-        'baptiste_tesla': { color: '#0ea5e9', baseName: 'baptiste' }, // Building
+        'diego_knight': { color: '#3b82f6', baseName: 'diego', spawnSound: '/assets/sfx/diego_spawn.mp3' },
+        'timsit_elixir_dragon': { color: '#a855f7', baseName: 'timsit', spawnSound: '/assets/sfx/timsit_spawn.mp3' },
+        'jausseaud_money_bowler': { color: '#10b981', baseName: 'jausseaud', spawnSound: '/assets/sfx/jausseaud_spawn.mp3' },
+        'alexis_grandpa_wizard': { color: '#ef4444', baseName: 'alexis', spawnSound: '/assets/sfx/alexis_spawn.mp3' },
+        'raph_chinese_giant': { color: '#f97316', baseName: 'raph', spawnSound: '/assets/sfx/raph_spawn.mp3' },
+        'gabriel_math_dart_goblin': { color: '#22c55e', baseName: 'gabriel', spawnSound: '/assets/sfx/gabriel_spawn.mp3' },
+        'nael_biker_sapper': { color: '#facc15', baseName: 'nael', spawnSound: '/assets/sfx/nael_spawn.mp3' },
+        'sacha_control_agent': { color: '#6366f1', baseName: 'sacha', spawnSound: '/assets/sfx/sacha_spawn.mp3' },
+        'mathieu_joker': { color: '#8b5cf6', baseName: 'mathieu', spawnSound: '/assets/sfx/mathieu_spawn.mp3' },
+        'tao_charging_prince': { color: '#f59e0b', baseName: 'tao', spawnSound: '/assets/sfx/tao_spawn.mp3' },
+        'isaac_casino_tower': { color: '#f43f5e', baseName: 'isaac', spawnSound: '/assets/sfx/isaac_spawn.mp3' }, // Building
+        'arbre_habonneau': { color: '#166534', baseName: 'habonneau', spawnSound: '/assets/sfx/habonneau_spawn.mp3' }, // Building
+        'baptiste_tesla': { color: '#0ea5e9', baseName: 'baptiste', spawnSound: '/assets/sfx/baptiste_spawn.mp3' }, // Building
         'mathis_enzo_tricksters': {
             color: '#3b82f6',
             baseName: 'mathis_enzo',
             projectile: '/assets/projectile/Bruschetta.jpeg',
-            rotationOffset: 0 // Bruschetta might spin or be round
+            rotationOffset: 0,
+            spawnSound: '/assets/sfx/mathis_enzo_spawn.mp3'
         },
-        'alex_goblin_barrel': { color: '#10b981', baseName: 'alex' } // Spell
+        'alex_goblin_barrel': { color: '#10b981', baseName: 'alex', spawnSound: '/assets/sfx/alex_spawn.mp3' } // Spell
     };
 
     const override = overrides[id];
@@ -102,7 +106,8 @@ const getVisuals = (id: string, type: UnitType) => {
             model: `/assets/units/${override.baseName}_model.png`,
             color: override.color,
             projectile: override.projectile,
-            rotationOffset: override.rotationOffset
+            rotationOffset: override.rotationOffset,
+            spawnSound: override.spawnSound || defaults.spawnSound
         };
     }
 
@@ -139,7 +144,8 @@ export const loadCards = (): Card[] => {
                     ? visuals.projectile
                     : (normalizeRange(rawRange) !== Range.MELEE ? 'arrow' : undefined),
                 projectileSpeed: 500,
-                rotationOffset: visuals.rotationOffset
+                rotationOffset: visuals.rotationOffset,
+                spawnSound: visuals.spawnSound
             }
         };
     });

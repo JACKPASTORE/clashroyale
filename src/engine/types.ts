@@ -88,6 +88,7 @@ export interface Card {
         projectile?: string; // e.g., 'arrow', 'fireball'
         projectileSpeed?: number;
         rotationOffset?: number; // Degrees to adjust image
+        spawnSound?: string;
     };
 }
 

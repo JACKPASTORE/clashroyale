@@ -4,23 +4,30 @@ import MobileContainer from './components/layout/MobileContainer';
 import BottomNavigation from './components/layout/BottomNavigation';
 import HomeScreen from './screens/HomeScreen';
 import DecksScreen from './screens/DecksScreen';
-import BattleScreen from './screens/BattleScreen'; // Back to BattleScreen with integrated engine
+import LobbyScreen from './screens/LobbyScreen';
 import LoadingScreen from './screens/LoadingScreen';
-import { registerAllAbilities } from './engine/abilities/registerAll';
-
-// Register all abilities on app load
-registerAllAbilities();
-
-// Screens (placeholders for now)
-const PlaceholderScreen = ({ name }) => <div className="p-4 pt-20 text-white text-center font-bold text-2xl mt-20">{name.toUpperCase()}</div>;
+import BattleScreen from './screens/BattleScreen';
+// ... imports
 
 function App() {
   const [activeTab, setActiveTab] = useState('battle');
-  const [battleState, setBattleState] = useState('lobby'); // 'lobby', 'loading', 'fighting'
+  const [battleState, setBattleState] = useState('lobby'); // 'lobby', 'online_menu', 'loading', 'fighting'
+  const [battleOptions, setBattleOptions] = useState({ mode: 'local' });
 
-  const startBattle = () => {
+  const startLocalBattle = () => {
+    setBattleOptions({ mode: 'local' });
     setBattleState('loading');
-  }
+  };
+
+  const openLobby = () => {
+    setBattleState('online_menu');
+  };
+
+  const startOnlineBattle = (options) => {
+    console.log('[App] Starting Online Battle with options:', options);
+    setBattleOptions(options); // { mode: 'online', role: 'host'|'client', roomId }
+    setBattleState('loading');
+  };
 
   const renderScreen = () => {
     const pageTransition = {
@@ -30,6 +37,15 @@ function App() {
       transition: { duration: 0.3 }
     };
 
+    if (battleState === 'online_menu') return (
+      <motion.div key="online_menu" {...pageTransition} className="w-full h-full">
+        <LobbyScreen
+          onBack={() => setBattleState('lobby')}
+          onStartGame={startOnlineBattle}
+        />
+      </motion.div>
+    );
+
     if (battleState === 'loading') return (
       <motion.div key="loading" {...pageTransition} className="w-full h-full">
         <LoadingScreen onComplete={() => setBattleState('fighting')} />
@@ -38,13 +54,16 @@ function App() {
 
     if (battleState === 'fighting') return (
       <motion.div key="battle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
-        <BattleScreen onExit={() => setBattleState('lobby')} />
+        <BattleScreen
+          onExit={() => setBattleState('lobby')}
+          gameOptions={battleOptions}
+        />
       </motion.div>
     );
 
     let content;
     switch (activeTab) {
-      case 'battle': content = <HomeScreen onStartBattle={startBattle} />; break;
+      case 'battle': content = <HomeScreen onStartBattle={startLocalBattle} onOpenLobby={openLobby} />; break;
       case 'cards': content = <DecksScreen />; break;
       default: content = <PlaceholderScreen name={activeTab} />; break;
     }
