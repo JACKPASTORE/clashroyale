@@ -3,6 +3,8 @@ import { Crown, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Team } from '../../engine/types';
 import { getCardById } from '../../data/load';
+import { BRIDGE_LEFT_X, BRIDGE_RIGHT_X, BRIDGE_WIDTH } from '../../engine/constants';
+import KeyedImage from '../KeyedImage';
 
 const UnitRenderer = ({ unit, isMirrored }) => {
     const card = getCardById(unit.cardId);
@@ -55,14 +57,15 @@ const UnitRenderer = ({ unit, isMirrored }) => {
 
             {/* Visual Representation */}
             {hasModel ? (
-                <div className={`w-12 h-12 relative flex items-center justify-center`}>
+                <div className={`w-[60px] h-[60px] relative flex items-center justify-center isolate`}>
                     {/* Sprite Placeholder - In future use <img> */}
-                    <img
+                    <KeyedImage
                         src={card.visuals.model}
                         alt={card.name}
                         className={`w-full h-full object-contain drop-shadow-lg ${unit.state === 'attacking' ? 'animate-pulse' : ''}`}
                         style={{
-                            filter: unit.team === Team.RED ? 'hue-rotate(180deg)' : 'none'
+                            // Fond blanc -> transparent via KeyedImage, puis on garde un léger boost de lisibilité.
+                            filter: `${unit.team === Team.RED ? 'hue-rotate(180deg) ' : ''}brightness(1.05) contrast(1.05)`
                         }}
                     />
                 </div>
@@ -114,7 +117,7 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [], isMirrored = f
     const getHPPercent = (tower) => tower ? (tower.hp / tower.maxHp) * 100 : 0;
 
     return (
-        <div className="absolute inset-x-0 top-16 bottom-28 bg-[#9caeb5] overflow-hidden flex flex-col items-center shadow-inner select-none z-0">
+        <div className="absolute inset-x-0 top-16 bottom-24 bg-[#9caeb5] overflow-hidden flex flex-col items-center shadow-inner select-none z-0">
 
             {/* --- ENVIRONMENT BACKGROUND (Forest/Cliffs) --- */}
             <div className="absolute inset-0 z-0 bg-[#4ade80]">
@@ -220,16 +223,21 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [], isMirrored = f
                         <div className="absolute inset-0 bg-gradient-to-b from-[#d946ef]/60 to-[#c026d3]/80 mix-blend-overlay"></div>
                     </div>
 
-                    {/* Bridges pushed further out */}
-                    <div className="absolute left-6 w-12 h-16 bg-[#854d0e] border-x-2 border-[#451a03] rounded shadow-[0_4px_4px_rgba(0,0,0,0.5)] z-20 flex flex-col justify-between py-1 px-[2px]">
-                        <div className="w-full h-[2px] bg-[#fcd34d]/30 mb-auto"></div>
-                        <div className="w-full h-[2px] bg-[#fcd34d]/30 mt-auto"></div>
-                    </div>
-
-                    <div className="absolute right-6 w-12 h-16 bg-[#854d0e] border-x-2 border-[#451a03] rounded shadow-[0_4px_4px_rgba(0,0,0,0.5)] z-20 flex flex-col justify-between py-1 px-[2px]">
-                        <div className="w-full h-[2px] bg-[#fcd34d]/30 mb-auto"></div>
-                        <div className="w-full h-[2px] bg-[#fcd34d]/30 mt-auto"></div>
-                    </div>
+                    {/* Bridges aligned with engine coords (so units cross exactly where the bridge is drawn) */}
+                    {[BRIDGE_LEFT_X, BRIDGE_RIGHT_X].map((bridgeX, idx) => (
+                        <div
+                            key={idx}
+                            className="absolute h-16 bg-[#854d0e] border-x-2 border-[#451a03] rounded shadow-[0_4px_4px_rgba(0,0,0,0.5)] z-20 flex flex-col justify-between py-1 px-[2px]"
+                            style={{
+                                width: `${BRIDGE_WIDTH}px`,
+                                left: `${(bridgeX / 480) * 100}%`,
+                                transform: 'translateX(-50%)'
+                            }}
+                        >
+                            <div className="w-full h-[2px] bg-[#fcd34d]/30 mb-auto"></div>
+                            <div className="w-full h-[2px] bg-[#fcd34d]/30 mt-auto"></div>
+                        </div>
+                    ))}
                 </div>
 
 

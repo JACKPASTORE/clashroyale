@@ -114,7 +114,7 @@ export interface Unit extends Entity {
     rangePx: number;
     targetType: TargetType[];
     lastAttackTime: number; // timestamp
-    state: 'idle' | 'moving' | 'attacking';
+    state: 'idle' | 'moving' | 'attacking' | 'searching';
     targetId?: string; // ID of current target entity
     lane: 'left' | 'right'; // Lane assignment for waypoint navigation
 

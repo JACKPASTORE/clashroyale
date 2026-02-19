@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameState, Team, UnitType } from '../engine/types';
-import { ARENA_WIDTH, ARENA_HEIGHT, BRIDGE_Y, TOWER_RADIUS, UNIT_RADIUS } from '../engine/constants';
+import { ARENA_WIDTH, ARENA_HEIGHT, BRIDGE_Y, BRIDGE_LEFT_X, BRIDGE_RIGHT_X, BRIDGE_WIDTH, TOWER_RADIUS, UNIT_RADIUS } from '../engine/constants';
 import { getCardById } from '../data/load';
 
 interface ArenaProps {
@@ -32,6 +32,20 @@ const Arena: React.FC<ArenaProps> = ({ state, onTap }) => {
             >
                 <span className="text-white/30 text-xs font-bold tracking-widest">RIVER</span>
             </div>
+
+            {/* BRIDGES (visual markers) */}
+            {[BRIDGE_LEFT_X, BRIDGE_RIGHT_X].map((x, idx) => (
+                <div
+                    key={idx}
+                    className="absolute bg-yellow-200/70 border border-yellow-400 shadow-inner"
+                    style={{
+                        width: BRIDGE_WIDTH,
+                        height: 60,
+                        left: x - BRIDGE_WIDTH / 2,
+                        top: BRIDGE_Y - 30,
+                    }}
+                />
+            ))}
 
             {/* TOWERS */}
             {state.towers.map(tower => (

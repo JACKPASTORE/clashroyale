@@ -7,8 +7,16 @@ export const TOWER_RADIUS = 30;
 export const UNIT_RADIUS = 15;
 
 export const BRIDGE_Y = ARENA_HEIGHT / 2;
+// Bridge X positions (visuellement sur les côtés, style Clash Royale)
 export const BRIDGE_LEFT_X = 80;
 export const BRIDGE_RIGHT_X = ARENA_WIDTH - 80;
+
+// River bounds (used for placement + movement constraints)
+export const RIVER_MIN_Y = 360;
+export const RIVER_MAX_Y = 440;
+
+// Width (in px) considered "on the bridge"
+export const BRIDGE_WIDTH = 40;
 
 export const ELIXIR_MAX = 10;
 export const ELIXIR_REGEN_RATE = 0.4; // Slower regen: 1 elixir per 2.5s
@@ -27,11 +35,12 @@ export const SPEED_MAP: Record<string, number> = {
 
 // Range Mappings (px)
 export const RANGE_MAP: Record<string, number> = {
-    [Range.MELEE]: 40,      // Close combat
-    [Range.SHORT]: 100,
-    [Range.MEDIUM]: 180,    // Standard ranged
-    [Range.LONG]: 250,      // Sniper
-    [Range.VERY_LONG]: 350, // Princess/Siege
+    [Range.MELEE]: 5,       // Contact hitbox (effectively touching)
+    [Range.SHORT]: 42,      // Reduced by 30% (was 60)
+    [Range.MEDIUM]: 63,     // Reduced by 30% (was 90)
+    [Range.LONG]: 98,       // Reduced by 30% (was 140)
+    // Base "très_longue" (la Princesse / cas spéciaux ont un override au spawn)
+    [Range.VERY_LONG]: 140,
     [Range.GLOBAL]: 9999,   // Spells
     [Range.NONE]: 0,
 };

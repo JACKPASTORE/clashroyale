@@ -1,6 +1,7 @@
 import { GameState, Team, Unit, Tower, TargetType } from './types';
 import { getCardById } from '../data/load';
 import { isValidPlacement } from './placement-validation';
+import { DEBUG_LOGS } from './debug';
 
 /**
  * Threat information for defensive decisions
@@ -58,11 +59,13 @@ export const botThink = (state: GameState): BotAction | null => {
 
     // Validate placement
     if (!isValidPlacement(placement.x, placement.y, team)) {
-        console.warn(`[Bot] Invalid placement at (${placement.x}, ${placement.y})`);
+        if (DEBUG_LOGS) console.warn(`[Bot] Invalid placement at (${placement.x}, ${placement.y})`);
         return null;
     }
 
-    console.log(`[Bot] ${isDefense ? 'DEFENSE' : 'ATTACK'} - Playing ${cardId} at (${placement.x}, ${placement.y})`);
+    if (DEBUG_LOGS) {
+        console.log(`[Bot] ${isDefense ? 'DEFENSE' : 'ATTACK'} - Playing ${cardId} at (${placement.x}, ${placement.y})`);
+    }
 
     return {
         cardId,

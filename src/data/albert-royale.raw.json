@@ -1,20 +1,20 @@
 {
     "jeu": {
-        "nom": "Albert Royale",
+        "nom": "Albert Royal",
         "version": "0.1",
-        "remarques": "Toutes les cartes incluent : élixir, PV, DPS d'attaque, type, vitesse, portée, cibles, capacités."
+        "remarques": "Toutes les cartes incluent : élixir, PV, DPS d'attaque, type, vitesse, portée, cibles, capacités. Pas de DEF."
     },
     "cartes": [
         {
             "id": "david_archer_stylet",
             "nom": "David",
-            "surnom": "Archer magique au stylet",
+            "nickname": "Archer magique au stylet",
             "type": "troupe",
             "élixir": 5,
-            "pv": 1600,
-            "atk_dps": 140,
+            "pv": 850,
+            "atk_dps": 240,
             "vitesse": "moyenne",
-            "portée": "très_longue",
+            "plage": "très_longue",
             "cibles": [
                 "sol",
                 "air"
@@ -22,23 +22,27 @@
             "capacités": [
                 {
                     "clé": "projectiles_perforants",
-                    "description": "Les stylos traversent plusieurs ennemis.",
-                    "params": {
-                        "max_pierce_targets": 3
-                    }
+                    "description": "Les stylos traversent plusieurs ennemis."
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://clashroyale.com/uploaded-images-blog/CR_facebook_share_02_180403_173302.jpg",
+                "model": "https://clashroyale.com/uploaded-images-blog/CR_facebook_share_02_180403_173302.jpg",
+                "color": "#1ea7e1",
+                "projectile": "arrow",
+                "projectileSpeed": 600
+            }
         },
         {
             "id": "timsit_elixir_dragon",
             "nom": "Timsit",
-            "surnom": "Dragon d'élixir",
+            "nickname": "Dragon d'élixir",
             "type": "troupe",
             "élixir": 3,
             "pv": 850,
             "atk_dps": 110,
             "vitesse": "rapide",
-            "portée": "courte",
+            "plage": "courte",
             "cibles": [
                 "sol"
             ],
@@ -51,63 +55,75 @@
                         "every_n_attacks": 3
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/0/0e/ElixirGolemCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/d/d0/ElixirGolem.png",
+                "color": "#d63031"
+            }
         },
         {
             "id": "jausseaud_money_bowler",
             "nom": "Jausseaud",
-            "surnom": "Bouliste de billets",
+            "nickname": "Bouliste de billets",
             "type": "troupe",
             "élixir": 7,
             "pv": 2300,
-            "atk_dps": 240,
+            "atk_dps": 300,
             "vitesse": "lent",
-            "portée": "moyenne",
+            "plage": "moyenne",
             "cibles": [
                 "sol"
             ],
             "capacités": [
                 {
                     "clé": "splash_damage",
-                    "description": "Attaque en zone avec des billets.",
-                    "params": {
-                        "radius": "medium"
-                    }
+                    "description": "Attaque en zone avec des billets."
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/9/91/BowlerCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/f/f0/Bowler.png",
+                "color": "#6c5ce7",
+                "projectile": "rock"
+            }
         },
         {
             "id": "arbre_habonneau",
             "nom": "Habonneau",
-            "surnom": "Arbre",
+            "nickname": "Arbre",
             "type": "bâtiment",
             "élixir": 2,
-            "pv": 1500,
+            "pv": 900,
             "atk_dps": 0,
             "vitesse": "aucune",
-            "portée": "aucune",
+            "plage": "aucune",
             "cibles": [],
             "capacités": [
                 {
                     "clé": "blocking_slow",
-                    "description": "Bloque et ralentit les ennemis proches.",
+                    "description": "Bloquer les unités et ralentir leur progression.",
                     "params": {
-                        "slow_percent": 25,
-                        "aura_radius": "medium"
+                        "slow_percent": 25
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/8/87/LogCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/8/87/LogCard.png",
+                "color": "#00b894"
+            }
         },
         {
             "id": "baptiste_tesla",
             "nom": "Baptiste",
-            "surnom": "Tesla sur batterie",
+            "nickname": "Tesla sur batterie",
             "type": "bâtiment",
             "élixir": 4,
             "pv": 1400,
             "atk_dps": 240,
             "vitesse": "aucune",
-            "portée": "moyenne",
+            "plage": "moyenne",
             "cibles": [
                 "sol",
                 "air"
@@ -115,173 +131,207 @@
             "capacités": [
                 {
                     "clé": "chain_lightning",
-                    "description": "Onde électrique qui rebondit sur plusieurs ennemis.",
+                    "description": "Onde électrique qui peut toucher plusieurs ennemis.",
                     "params": {
-                        "max_chain_targets": 3,
-                        "falloff": [
-                            1.0,
-                            0.7,
-                            0.5
-                        ]
+                        "max_chain_targets": 3
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/0/02/TeslaCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/0/02/TeslaCard.png",
+                "color": "#0984e3",
+                "projectile": "zap"
+            }
         },
         {
             "id": "nael_biker_sapper",
             "nom": "Nael",
-            "surnom": "Sapeur en moto",
+            "nickname": "Sapeur en moto",
             "type": "troupe",
             "élixir": 4,
-            "pv": 850,
+            "pv": 1000,
             "atk_dps": 0,
             "vitesse": "très_rapide",
-            "portée": "mêlée",
+            "plage": "mêlée",
             "cibles": [
                 "bâtiments"
             ],
             "capacités": [
                 {
-                    "clé": "bombe_suicide",
-                    "description": "Explose au contact d'une tour/bâtiment (gros dégâts bâtiments).",
+                    "clé": "bombe suicide",
+                    "description": "Explose à l'impact contre une tour (gros dégâts bâtiments).",
                     "params": {
                         "explosion_damage": 350,
-                        "only_hits_buildings": true,
-                        "splash_radius": "small"
+                        "only_hits_buildings": true
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/9/90/WallBreakersCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/5/5e/WallBreakers.png",
+                "color": "#e17055"
+            }
         },
         {
             "id": "alexis_grandpa_wizard",
             "nom": "Alexis",
-            "surnom": "Papi sorcier",
+            "nickname": "Papi sorcier",
             "type": "troupe",
             "élixir": 4,
             "pv": 1300,
             "atk_dps": 150,
             "vitesse": "lent",
-            "portée": "longue",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"
             ],
             "capacités": [
                 {
-                    "clé": "lent_à_l_impact",
+                    "touche": "lent_à_l'impact",
                     "description": "Ses attaques ralentissent les ennemis touchés.",
                     "params": {
                         "slow_percent": 20,
                         "duration_sec": 2.5
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/9/94/IceWizardCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/5/5a/IceWizard.png",
+                "color": "#74b9ff",
+                "projectile": "fireball"
+            }
         },
         {
             "id": "sacha_control_agent",
             "nom": "Sacha",
-            "surnom": "Agent de contrôle",
+            "nickname": "Agent de contrôle",
             "type": "troupe",
             "élixir": 4,
             "pv": 2100,
             "atk_dps": 100,
             "vitesse": "moyenne",
-            "portée": "mêlée",
+            "plage": "mêlée",
             "cibles": [
                 "sol"
             ],
             "capacités": [
                 {
                     "clé": "étourdir",
-                    "description": "Étourdit les ennemis proches.",
+                    "description": "Immobilisez les ennemis pendant 2 secondes.",
                     "params": {
                         "duration_sec": 2.0,
                         "radius": "small"
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/5/54/ElectroWizardCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/7/77/ElectroWizard.png",
+                "color": "#636e72"
+            }
         },
         {
             "id": "isaac_casino_tower",
             "nom": "Isaac",
-            "surnom": "Tour de casino",
+            "nickname": "Tour de casino",
             "type": "bâtiment",
             "élixir": 5,
-            "pv": 1800,
-            "atk_dps": 150,
+            "pv": 2600,
+            "atk_dps": 140,
             "vitesse": "aucune",
-            "portée": "moyenne",
+            "plage": "moyenne",
             "cibles": [
                 "sol",
                 "air"
             ],
             "capacités": [
                 {
-                    "clé": "effet_aléatoire",
-                    "description": "Déclenche un effet aléatoire (rage / boost / slow) périodiquement.",
+                    "clé": "orthographe_aléatoire",
+                    "description": "Déclenchez un effet aléatoire (rage / boost / diminution).",
                     "params": {
                         "effects": [
                             "rage",
                             "boost",
                             "slow"
                         ],
-                        "trigger_interval_sec": 6,
-                        "duration_sec": 3,
-                        "radius": "large"
+                        "trigger_interval_sec": 6
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/c/c9/BombTowerCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/0/07/BombTower.png",
+                "color": "#fdcb6e"
+            }
         },
         {
             "id": "mathieu_joker",
             "nom": "Mathieu",
-            "surnom": "Joker",
+            "nickname": "Joker (neutre)",
             "type": "troupe",
             "élixir": 4,
             "pv": 1500,
             "atk_dps": 170,
             "vitesse": "moyenne",
-            "portée": "moyenne",
+            "plage": "moyenne",
             "cibles": [
                 "sol",
                 "air"
             ],
-            "capacités": []
+            "capacités": [
+                {
+                    "clé": "espace réservé",
+                    "description": "Capacité à définir (carte neutre pour l'instant)."
+                }
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/4/42/RoyalGhostCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/5/52/RoyalGhost.png",
+                "color": "#b2bec3"
+            }
         },
         {
             "id": "tao_charging_prince",
             "nom": "Tao",
-            "surnom": "Prince chargeur",
+            "nickname": "Prince chargeur",
             "type": "troupe",
             "élixir": 5,
             "pv": 2200,
             "atk_dps": 220,
             "vitesse": "rapide",
-            "portée": "mêlée",
+            "plage": "mêlée",
             "cibles": [
                 "sol"
             ],
             "capacités": [
                 {
                     "clé": "charge_double_damage",
-                    "description": "Après une charge, le premier coup inflige x2 dégâts.",
+                    "description": "Charge : le premier coup après charge inflige x2 dégâts.",
                     "params": {
                         "damage_multiplier": 2.0,
                         "min_charge_distance": "medium"
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/1/1a/PrinceCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/3/33/Prince.png",
+                "color": "#2d3436"
+            }
         },
         {
             "id": "gabriel_math_dart_goblin",
             "nom": "Gabriel",
-            "surnom": "Gobelin sarbacane (formules)",
+            "nickname": "Gobelin sarbacane (formules)",
             "type": "troupe",
             "élixir": 3,
             "pv": 900,
-            "atk_dps": 120,
-            "vitesse": "moyenne",
-            "portée": "longue",
+            "atk_dps": 130,
+            "vitesse": "rapide",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"
@@ -289,40 +339,52 @@
             "capacités": [
                 {
                     "clé": "rapid_fire",
-                    "description": "Tire en rafales.",
+                    "description": "Tire en rafales rapides de 'formules'.",
                     "params": {
                         "burst_size": 3,
                         "burst_interval_sec": 0.6
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/d/d4/DartGoblinCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/9/96/DartGoblin.png",
+                "color": "#009432",
+                "projectile": "arrow"
+            }
         },
         {
             "id": "sarah_princess",
             "nom": "Sarah",
-            "surnom": "Princesse",
+            "nickname": "Princesse",
             "type": "troupe",
             "élixir": 3,
             "pv": 850,
             "atk_dps": 150,
             "vitesse": "moyenne",
-            "portée": "très_longue",
+            "plage": "très_longue",
             "cibles": [
                 "sol",
                 "air"
             ],
-            "capacités": []
+            "capacités": [],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/0/07/PrincessCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/c/c2/Princess.png",
+                "color": "#fab1a0",
+                "projectile": "fireball"
+            }
         },
         {
             "id": "jacques_unstable_legend",
             "nom": "Jacques",
-            "surnom": "Carte instable",
+            "nickname": "Carte instable",
             "type": "troupe",
             "élixir": 8,
             "pv": 4000,
             "atk_dps": 350,
             "vitesse": "lent",
-            "portée": "moyenne",
+            "plage": "moyenne",
             "cibles": [
                 "sol"
             ],
@@ -334,83 +396,101 @@
                         "spawn_probability": 0.5
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/0/00/MegaKnightCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/8/87/MegaKnight.png",
+                "color": "#2d3436"
+            }
         },
         {
             "id": "theo_miner_freeze",
             "nom": "Théo",
-            "surnom": "Mineur gel",
+            "nickname": "Mineur gel",
             "type": "troupe",
             "élixir": 4,
             "pv": 1600,
             "atk_dps": 110,
             "vitesse": "moyenne",
-            "portée": "mêlée",
+            "plage": "mêlée",
             "cibles": [
                 "sol"
             ],
             "capacités": [
                 {
                     "clé": "freeze_on_talk",
-                    "description": "Gèle les ennemis proches.",
+                    "description": "Gèle les proches pendant 1,5 seconde.",
                     "params": {
                         "duration_sec": 1.5,
                         "radius": "small"
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/0/09/MinerCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/e/eb/Miner.png",
+                "color": "#dfe6e9"
+            }
         },
         {
             "id": "mathis_enzo_tricksters",
             "nom": "Mathis & Enzo",
-            "surnom": "Fripons (tank + bruschettas)",
+            "nickname": "Fripons (tank + bruschettas)",
             "type": "troupe",
             "élixir": 4,
-            "pv": 1400,
-            "atk_dps": 180,
+            "pv": 1800,
+            "atk_dps": 170,
             "vitesse": "moyenne",
-            "portée": "mixte",
+            "plage": "mixte",
             "cibles": [
                 "sol"
             ],
             "capacités": [
                 {
                     "clé": "duo_unit",
-                    "description": "Deux unités liées : Mathis tank devant, Enzo attaque à distance derrière.",
+                    "description": "Mathis tank devant, Enzo attaque à distance avec des bruschettas.",
                     "params": {
                         "front_unit": "Mathis",
-                        "back_unit": "Enzo",
-                        "front_hp_ratio": 0.7,
-                        "back_hp_ratio": 0.3
+                        "back_unit": "Enzo"
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/c/c2/RascalsCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/a/a2/Rascals.png",
+                "color": "#00cec9"
+            }
         },
         {
             "id": "diego_knight",
             "nom": "Diego",
-            "surnom": "Chevalier",
+            "nickname": "Chevalier",
             "type": "troupe",
             "élixir": 3,
-            "pv": 1600,
-            "atk_dps": 150,
+            "pv": 1400,
+            "atk_dps": 120,
             "vitesse": "moyenne",
-            "portée": "mêlée",
+            "plage": "mêlée",
             "cibles": [
                 "sol"
             ],
-            "capacités": []
+            "capacités": [],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/e/e0/KnightCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/f/f0/Knight.png",
+                "color": "#b2bec3"
+            }
         },
         {
             "id": "noah_robot_wizard",
             "nom": "Noah",
-            "surnom": "Sorcier robotique",
+            "nickname": "Sorcier robotique",
             "type": "troupe",
             "élixir": 4,
             "pv": 1400,
             "atk_dps": 170,
             "vitesse": "moyenne",
-            "portée": "longue",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"
@@ -418,26 +498,31 @@
             "capacités": [
                 {
                     "clé": "spawn_minibots",
-                    "description": "Envoie des mini-robots régulièrement.",
+                    "description": "Envoie des mini-robots qui soutiennent les ennemis.",
                     "params": {
-                        "spawn_interval_sec": 5.0,
                         "bot_count": 2,
                         "bot_pv": 250,
                         "bot_atk_dps": 60
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/2/26/WizardCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/9/90/Wizard.png",
+                "color": "#d63031",
+                "projectile": "fireball"
+            }
         },
         {
             "id": "jules_football_musketeer",
             "nom": "Jules",
-            "surnom": "Mousquetaire (frappes de foot)",
+            "nickname": "Mousquetaire (frappes de foot)",
             "type": "troupe",
             "élixir": 4,
             "pv": 1300,
             "atk_dps": 190,
             "vitesse": "moyenne",
-            "portée": "longue",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"
@@ -445,48 +530,49 @@
             "capacités": [
                 {
                     "clé": "ligne_shot",
-                    "description": "Tirs en ligne droite (perce des ennemis).",
+                    "description": "Tirs en ligne droite (peut toucher plusieurs ennemis alignés).",
                     "params": {
                         "pierce_targets": 2
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/3/3d/MusketeerCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/9/90/Musketeer.png",
+                "color": "#fd79a8",
+                "projectile": "musket"
+            }
         },
         {
             "id": "jack_cavalier",
             "nom": "Jack",
-            "surnom": "Cavabelier",
+            "nickname": "Cavabelier",
             "type": "troupe",
             "élixir": 4,
-            "pv": 1800,
-            "atk_dps": 170,
-            "vitesse": "moyenne",
-            "portée": "mêlée",
+            "pv": 1700,
+            "atk_dps": 150,
+            "vitesse": "rapide",
+            "plage": "mêlée",
             "cibles": [
-                "bâtiments"
+                "sol"
             ],
-            "capacités": [
-                {
-                    "clé": "battle_ram_charge",
-                    "description": "Charge en ligne : repousse les ennemis sur son passage. Cible uniquement les bâtiments.",
-                    "params": {
-                        "knockback_distance_px": 16,
-                        "mini_stun_sec": 0.3,
-                        "charge_only_while_moving": true
-                    }
-                }
-            ]
+            "capacités": [],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/8/80/RamRiderCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/7/77/RamRider.png",
+                "color": "#636e72"
+            }
         },
         {
             "id": "salome_inferno_dragon",
             "nom": "Salomé",
-            "surnom": "Dragon de l'enfer (énervé)",
+            "nickname": "Dragon de l'enfer (énervé)",
             "type": "troupe",
             "élixir": 6,
             "pv": 2400,
             "atk_dps": 90,
             "vitesse": "moyenne",
-            "portée": "moyenne",
+            "plage": "moyenne",
             "cibles": [
                 "sol",
                 "air"
@@ -494,66 +580,78 @@
             "capacités": [
                 {
                     "clé": "ramping_damage",
-                    "description": "Les dégâts montent tant que la même cible est attaquée.",
+                    "description": "Les dégâts augmentent tant que la même cible est attaquée.",
                     "params": {
                         "min_dps": 90,
-                        "max_dps": 260,
-                        "ramp_time_sec": 5.0
+                        "max_dps": 300,
+                        "ramp_time_sec": 3.5
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/1/14/InfernoDragonCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/2/29/InfernoDragon.png",
+                "color": "#d63031"
+            }
         },
         {
             "id": "alex_goblin_barrel",
             "nom": "Alex",
-            "surnom": "Fût à gobelins",
+            "nickname": "Fût à gobelins",
             "type": "sort",
             "élixir": 3,
             "pv": 0,
             "atk_dps": 0,
             "vitesse": "aucune",
-            "portée": "global",
-            "cibles": [
-                "tours"
-            ],
+            "plage": "global",
+            "cibles": "tours",
             "capacités": [
                 {
                     "clé": "spawn_goblins_on_tower",
-                    "description": "Lance un fût et fait apparaître des gobelins au contact d'une tour.",
+                    "description": "Lance un fût qui fait apparaître des gobelins au contact d'une tour.",
                     "params": {
                         "goblins_spawned": 3,
                         "goblin_pv": 350,
                         "goblin_atk_dps": 80
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/a/a8/GoblinBarrelCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/a/a8/GoblinBarrelCard.png",
+                "color": "#009432"
+            }
         },
         {
             "id": "raph_chinese_giant",
             "nom": "Raph",
-            "surnom": "Géant chinois",
+            "nickname": "Géant chinois",
             "type": "troupe",
             "élixir": 8,
             "pv": 4300,
             "atk_dps": 240,
             "vitesse": "lent",
-            "portée": "mêlée",
+            "plage": "mêlée",
             "cibles": [
                 "bâtiments"
             ],
             "capacités": [
                 {
                     "clé": "invoquer_minichichis",
-                    "description": "Invoque des mini-chichis derrière lui régulièrement.",
+                    "description": "Invoquer des mini-chichis derrière lui régulièrement.",
                     "params": {
                         "spawn_interval_sec": 5.0,
                         "chichi_count": 2,
                         "chichi_pv": 220,
-                        "chichi_atk_dps": 55,
-                        "max_active": 6
+                        "chichi_atk_dps": 55
                     }
                 }
-            ]
+            ],
+            "visuals": {
+                "icon": "https://static.wikia.nocookie.net/clashroyale/images/7/78/GoblinGiantCard.png",
+                "model": "https://static.wikia.nocookie.net/clashroyale/images/e/ea/GoblinGiant.png",
+                "color": "#2d3436"
+            }
         }
     ],
     "tours": [
@@ -563,7 +661,7 @@
             "type_tour": "roi",
             "pv": 4500,
             "atk_dps": 180,
-            "portée": "longue",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"
@@ -575,7 +673,7 @@
             "type_tour": "princesse",
             "pv": 2600,
             "atk_dps": 140,
-            "portée": "longue",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"
@@ -587,7 +685,7 @@
             "type_tour": "princesse",
             "pv": 2600,
             "atk_dps": 140,
-            "portée": "longue",
+            "plage": "longue",
             "cibles": [
                 "sol",
                 "air"

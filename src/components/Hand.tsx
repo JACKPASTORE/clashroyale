@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card } from '../engine/types';
 import { getCardById } from '../data/load';
+import KeyedImage from './KeyedImage';
+import { DEBUG_LOGS } from '../engine/debug';
 
 interface HandProps {
     handIds: string[];
@@ -38,7 +40,7 @@ const Hand: React.FC<HandProps> = ({ handIds, selectedCardId, onSelectCard, elix
                         <button
                             key={id}
                             onClick={() => {
-                                console.log('[Hand] Card clicked:', id, 'canAfford:', canAfford);
+                                if (DEBUG_LOGS) console.log('[Hand] Card clicked:', id, 'canAfford:', canAfford);
                                 if (canAfford) {
                                     onSelectCard(id);
                                 }
@@ -55,9 +57,14 @@ const Hand: React.FC<HandProps> = ({ handIds, selectedCardId, onSelectCard, elix
                             </div>
 
                             {/* Visual */}
-                            <div className={`w-[90%] h-[60%] ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-white' : 'bg-gray-600'} rounded flex items-center justify-center mb-1 overflow-hidden`}>
+                            <div className={`w-[90%] h-[60%] ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-transparent' : 'bg-gray-600'} rounded flex items-center justify-center mb-1 overflow-hidden`}>
                                 {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
-                                    <img src={card.visuals.icon} className="w-full h-full object-cover" alt={card.name} />
+                                    <KeyedImage
+                                        src={card.visuals.icon}
+                                        alt={card.name}
+                                        className="w-full h-full object-cover"
+                                        maxSize={512}
+                                    />
                                 ) : (
                                     <span className="text-3xl">
                                         {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}

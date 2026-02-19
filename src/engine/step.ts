@@ -1,5 +1,5 @@
 import { GameState, Team, Unit, Tower, Entity, TargetType, UnitType, AbilityEventType } from './types';
-import { HIT_COOLDOWN, ELIXIR_REGEN_RATE, ELIXIR_MAX } from './constants';
+import { HIT_COOLDOWN, ELIXIR_REGEN_RATE, ELIXIR_MAX, BRIDGE_Y, BRIDGE_LEFT_X, BRIDGE_RIGHT_X, BRIDGE_WIDTH, RIVER_MIN_Y, RIVER_MAX_Y } from './constants';
 import { getCardById } from '../data/load';
 import { updateStatuses, isStunned, getEffectiveSpeed } from './status';
 import { executeAbility, hasAbility } from './abilities/index';
@@ -19,6 +19,27 @@ const getEnemies = (state: GameState, myTeam: Team): Entity[] => {
     const units = state.units.filter(u => u.team !== myTeam && u.hp > 0);
     const towers = state.towers.filter(t => t.team !== myTeam && t.hp > 0);
     return [...units, ...towers];
+};
+
+const enforceRiverBridgeConstraint = (unit: Unit, prevX: number, prevY: number) => {
+    // Force bridge crossing even with large dt ("tunneling"):
+    // if a unit enters the river band OR crosses from one side to the other in one frame,
+    // and it's not on its lane bridge, snap it back to the bank aligned with the bridge.
+    const inRiverNow = unit.y >= RIVER_MIN_Y && unit.y <= RIVER_MAX_Y;
+    const crossedRiverInOneStep =
+        (prevY > RIVER_MAX_Y && unit.y < RIVER_MIN_Y) ||
+        (prevY < RIVER_MIN_Y && unit.y > RIVER_MAX_Y);
+
+    if (!inRiverNow && !crossedRiverInOneStep) return;
+
+    const bridgeX = unit.lane === 'left' ? BRIDGE_LEFT_X : BRIDGE_RIGHT_X;
+    const onBridgeNow = Math.abs(unit.x - bridgeX) <= BRIDGE_WIDTH / 2;
+    const onBridgePrev = Math.abs(prevX - bridgeX) <= BRIDGE_WIDTH / 2;
+    if (onBridgeNow || onBridgePrev) return;
+
+    unit.x = bridgeX;
+    // Put it back on its original side (based on prevY), just outside the river band.
+    unit.y = prevY > BRIDGE_Y ? (RIVER_MAX_Y + 1) : (RIVER_MIN_Y - 1);
 };
 
 const canTarget = (attacker: Unit | Tower, target: Entity) => {
@@ -89,6 +110,11 @@ export const step = (state: GameState, dt: number): GameState => {
         // If dead, skip (filtered later)
         if (unit.hp <= 0) return unit;
 
+        // === RANGE OVERRIDES (consistency) ===
+        // Garantit que certaines cartes gardent une portée stable en jeu (pas "parfois loin / parfois normal").
+        if (unit.cardId === 'sarah_princess') unit.rangePx = 220;
+        if (unit.cardId === 'david_archer_stylet') unit.rangePx = 180;
+
         // === SPECIAL ABILITY: Barrel Delay Logic ===
         if (unit.abilityData?.isBarrel) {
             if (now >= unit.abilityData.spawnTime + 2000) {
@@ -137,248 +163,297 @@ export const step = (state: GameState, dt: number): GameState => {
             return unit; // Cannot move or attack
         }
 
-        // === 1. TARGETING SYSTEM (Detailed Refresh) ===
-        // Instruction: "Dès qu'une cible est détruite... repasser en état Recherche"
-
-        let target: Entity | null = null;
-        let minDist = Infinity;
-
-        // A. Check Locked Target
+        // === 1. STATE TRANSITION & SURVIVAL CHECK ===
+        // "A chaque tick... si cible <= 0 OU null -> RECHERCHE"
+        // Also validate if current target is still allowed (e.g. became invisible? not in this game)
         if (unit.targetId) {
             const allEntities: Entity[] = [...newState.units, ...newState.towers];
             const existing = allEntities.find(e => e.id === unit.targetId);
 
-            // Validate: Must be alive and valid target
-            if (existing && existing.hp > 0 && canTarget(unit, existing)) {
-                target = existing;
-                minDist = getDistance(unit, target);
-            } else {
-                // RESET: Target died or invalid. Immediate unlock.
+            // Check validity
+            if (!existing || existing.hp <= 0 || !canTarget(unit, existing)) {
+                // Target lost/dead/invalid
                 unit.targetId = undefined;
-                target = null;
+                unit.state = 'searching'; // Force Search state
+            } else {
+                // Target lock leash: if target is VERY far, we can drop it (counts as "hors de portée")
+                const d = getDistance(unit, existing);
+                const leash = Math.max(unit.rangePx * 2, 220);
+                if (d > leash) {
+                    unit.targetId = undefined;
+                    unit.state = 'searching';
+                }
+            }
+        } else {
+            // No target locked? We should probably be searching or moving.
+            if (unit.state === 'attacking') {
+                // Recover from weird state
+                unit.state = 'searching';
             }
         }
 
-        // B. Search (Tick System)
-        // Instruction: "Si cible nulle... lance une nouvelle vérification"
-        if (!target) {
-            // Note: We use 'newState.units' potentially to see updated HP if we want to be super strict, 
-            // but 'state' is safe for consistent frame behavior.
-            const enemies = getEnemies(state, unit.team);
+        // === 2. SEARCH PHASE (RE-AGRO) ===
+        // "En état RECHERCHE, scan... SI ennemi valide... Verrouiller... ATTAQUE. SINON MARCHE"
+        // We also run this if we are moving, to check for new targets in range (Aggro)
+        // IMPORTANT (Target Lock): si une unité a déjà une cible, elle ne rescan pas tant que la cible est valide.
+        if (!unit.targetId && (unit.state === 'searching' || unit.state === 'moving' || unit.state === 'idle')) {
+            let foundTarget: Entity | null = null;
+            let foundDist = Infinity;
+
+            const enemies = getEnemies(newState, unit.team);
+            // Search radius: User said "plage (portée) définie dans le JSON" (rangePx)
+            // "scan son environnement selon sa plage (portée)"
+            // On garde une petite marge pour que l'unité "voit" un peu plus loin que sa portée,
+            // mais on évite le gros minimum à 150px qui faisait lock des tours trop tôt.
+            const searchRadius = Math.max(unit.rangePx + 40, 55);
 
             for (const e of enemies) {
                 if (!canTarget(unit, e)) continue;
+
                 const d = getDistance(unit, e);
-                // Simple closest unit logic
-                if (d < minDist) {
-                    minDist = d;
-                    target = e;
+                const combinedRadius = unit.radius + e.radius;
+                const distEdge = d - combinedRadius;
+
+                // Check AGGRO range (searchRadius)
+                if (distEdge <= searchRadius) {
+                    if (d < foundDist) {
+                        foundDist = d;
+                        foundTarget = e;
+                    }
                 }
             }
 
-            if (target) {
-                // LOCK: New target found
-                unit.targetId = target.id;
+            if (foundTarget) {
+                unit.targetId = foundTarget.id;
+                // "Rester sur place et passer en état ATTAQUE"
+                // We set attacking immediately. The movement logic below will handle 
+                // moving into *exact* attack range if we are just within aggro but not attack range.
+                unit.state = 'attacking';
+            } else {
+                // "SINON ... Passer en état MARCHE"
+                if (unit.state === 'searching') {
+                    unit.state = 'moving';
+                }
             }
         }
 
-        // === 2. ACTION SYSTEM (Loop Decision) ===
-        // Instruction: "Si target_in_range FAUX... is_moving doit repasser à VRAI"
+        // === 3. RELANCE DU MOUVEMENT & EXECUTION ===
+        // "En état MARCHE... retrouver vélocité... Recalculer chemin"
 
-        if (target) {
-            // We have a live, valid target.
+        // Reset speed if needed (simple check, specific slow logic is in status.ts)
+        // We use getEffectiveSpeed(unit) so base speed is always derived from stats + status.
 
-            const distanceToTargetCenter = minDist;
-            const distanceToTargetEdge = distanceToTargetCenter - target.radius - unit.radius;
+        // --- CASE A: HAVE TARGET (ATTACK/CHASE) ---
+        if (unit.targetId) {
+            const allEntities: Entity[] = [...newState.units, ...newState.towers];
+            const target = allEntities.find(e => e.id === unit.targetId);
 
-            const isMelee = unit.rangePx < 40;
-            const effectiveAttackRange = isMelee ? 5 : unit.rangePx;
+            if (target) {
+                const dist = getDistance(unit, target);
+                const distEdge = dist - target.radius - unit.radius;
 
-            // CHECK RANGE
-            if (distanceToTargetEdge <= effectiveAttackRange) {
-                // --- STATE: ATTACKING ---
-                unit.state = 'attacking';
-                // Stop movement implicitly by NOT entering move block
+                const isMelee = unit.rangePx < 40;
+                // Attack range check
+                const inAttackRange = isMelee ? (distEdge <= 0) : (distEdge <= unit.rangePx);
+                if (inAttackRange) {
+                    // IN RANGE -> ATTACK
+                    unit.state = 'attacking';
 
-                if (now - unit.lastAttackTime > HIT_COOLDOWN * 1000) {
-                    unit.lastAttackTime = now;
-                    const damage = unit.dps * HIT_COOLDOWN;
+                    // Anti-"skip blocker" rule:
+                    // If our current target is a TOWER, but there is ANY non-tower enemy (troop/building)
+                    // in our attack range, we must prefer that closer blocker instead of shooting the tower.
+                    const targetIsTower = ('type' in target);
+                    if (targetIsTower) {
+                        const enemies = getEnemies(newState, unit.team);
+                        let bestNonTower: Entity | null = null;
+                        let bestNonTowerEdge = Infinity;
 
-                    // Projectile vs Instant
-                    const spawnProjectile = !isMelee;
-                    const card = getCardById(unit.cardId);
-                    const visual = card?.visuals?.projectile || (spawnProjectile ? 'arrow' : undefined);
-
-                    if (spawnProjectile && visual) {
-                        const proj = {
-                            id: `proj_${unit.id}_${now}_${Math.random()}`,
-                            ownerId: unit.id,
-                            team: unit.team,
-                            targetId: target.id,
-                            x: unit.x,
-                            y: unit.y - 15,
-                            startX: unit.x,
-                            startY: unit.y - 15,
-                            speed: card?.visuals.projectileSpeed || 400,
-                            damage: damage,
-                            visual: visual,
-                            rotationOffset: card?.visuals.rotationOffset || 0,
-                            progress: 0,
-                            targetType: unit.targetType
-                        };
-                        newProjectiles.push(proj);
-                    } else {
-                        // Instant Damage
-                        let targetDead = false;
-                        if ('cardId' in target) {
-                            const u = newState.units.find(u => u.id === target!.id);
-                            if (u) {
-                                u.hp -= damage;
-                                if (u.hp <= 0) targetDead = true;
+                        for (const e of enemies) {
+                            if (!canTarget(unit, e)) continue;
+                            if ('type' in e) continue; // skip towers for this rule
+                            const d2 = getDistance(unit, e);
+                            const edge2 = d2 - e.radius - unit.radius;
+                            const inRange2 = isMelee ? (edge2 <= 0) : (edge2 <= unit.rangePx);
+                            if (!inRange2) continue;
+                            if (edge2 < bestNonTowerEdge) {
+                                bestNonTowerEdge = edge2;
+                                bestNonTower = e;
                             }
+                        }
+
+                        if (bestNonTower && bestNonTower.id !== unit.targetId) {
+                            unit.targetId = bestNonTower.id;
+                            unit.state = 'attacking';
+                            return unit;
+                        }
+                    }
+
+                    // Special case: Nael (bombe suicide) - explode on contact vs buildings/towers
+                    if (isMelee && unit.cardId === 'nael_biker_sapper') {
+                        const card = getCardById(unit.cardId);
+                        const ability = card?.abilities?.find(a =>
+                            a?.clé === 'bombe_suicide' ||
+                            a?.key === 'bombe_suicide' ||
+                            a?.clé === 'bombe suicide' ||
+                            a?.key === 'bombe suicide'
+                        );
+                        const explosionDamage = ability?.params?.explosion_damage ?? 350;
+
+                        // Only hits buildings (towers are treated as buildings here)
+                        const targetIsTower = !('cardId' in target);
+                        const targetIsBuildingUnit = ('cardId' in target) && (getCardById((target as Unit).cardId)?.type === UnitType.BUILDING);
+
+                        if (targetIsTower || targetIsBuildingUnit) {
+                            if (targetIsTower) {
+                                const t = newState.towers.find(t => t.id === target.id);
+                                if (t) t.hp -= explosionDamage;
+                            } else {
+                                const u = newState.units.find(u => u.id === target.id);
+                                if (u) u.hp -= explosionDamage;
+                            }
+                            unit.hp = 0; // suicide
+                            return unit;
+                        }
+                    }
+
+                    if (now - unit.lastAttackTime > HIT_COOLDOWN * 1000) {
+                        unit.lastAttackTime = now;
+                        const damage = unit.dps * HIT_COOLDOWN;
+
+                        // Projectile vs Instant
+                        const spawnProjectile = !isMelee;
+                        const card = getCardById(unit.cardId);
+                        const visual = card?.visuals?.projectile || (spawnProjectile ? 'arrow' : undefined);
+
+                        if (spawnProjectile && visual) {
+                            const proj = {
+                                id: `proj_${unit.id}_${now}_${Math.random()}`,
+                                ownerId: unit.id,
+                                team: unit.team,
+                                targetId: target.id,
+                                x: unit.x,
+                                y: unit.y - 15,
+                                startX: unit.x,
+                                startY: unit.y - 15,
+                                speed: card?.visuals.projectileSpeed || 400,
+                                damage: damage,
+                                visual: visual,
+                                rotationOffset: card?.visuals.rotationOffset || 0,
+                                progress: 0,
+                                targetType: unit.targetType
+                            };
+                            newProjectiles.push(proj);
                         } else {
-                            const t = newState.towers.find(t => t.id === target!.id);
-                            if (t) {
-                                t.hp -= damage;
-                                if (t.hp <= 0) targetDead = true;
+                            // Instant
+                            if ('cardId' in target) {
+                                const u = newState.units.find(u => u.id === target!.id);
+                                if (u) u.hp -= damage;
+                            } else {
+                                const t = newState.towers.find(t => t.id === target!.id);
+                                if (t) t.hp -= damage;
                             }
                         }
-
-                        // Optimization: If we killed it this frame, clear our lock immediately
-                        // so next frame we don't waste time checking a dead ID.
-                        if (targetDead) {
-                            unit.targetId = undefined;
+                    }
+                } else {
+                    // Opportunistic retarget:
+                    // Si je poursuis une cible hors portée, mais qu'une troupe ennemie entre DANS ma portée,
+                    // je switch dessus (sinon on "ignore" les ennemis juste devant).
+                    const enemies = getEnemies(newState, unit.team);
+                    let intercept: Entity | null = null;
+                    let interceptDist = Infinity;
+                    for (const e of enemies) {
+                        if (!canTarget(unit, e)) continue;
+                        const d2 = getDistance(unit, e);
+                        const edge2 = d2 - e.radius - unit.radius;
+                        const inRange2 = isMelee ? (edge2 <= 0) : (edge2 <= unit.rangePx);
+                        if (!inRange2) continue;
+                        if (d2 < interceptDist) {
+                            interceptDist = d2;
+                            intercept = e;
                         }
                     }
+                    if (intercept && intercept.id !== unit.targetId) {
+                        unit.targetId = intercept.id;
+                        unit.state = 'attacking';
+                        return unit;
+                    }
 
-                    if (ENABLE_ABILITIES && isMelee) {
-                        // Ability trigger
+                    // OUT OF RANGE -> CHASE (MOVE)
+                    // "L'unité ne doit s'arrêter que si une nouvelle cible..." -> We have a target, so we chase it.
+                    unit.state = 'moving';
+                    if (getEffectiveSpeed(unit) > 0) {
+                        const nextWaypoint = getNextWaypoint(
+                            unit.x, unit.y, unit.lane, unit.team,
+                            false,
+                            target.y
+                        );
+
+                        let destX = target.x;
+                        let destY = target.y;
+
+                        if (nextWaypoint) {
+                            destX = nextWaypoint.x;
+                            destY = nextWaypoint.y;
+                        }
+
+                        const dx = destX - unit.x;
+                        const dy = destY - unit.y;
+                        const dTotal = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dTotal > 0) {
+                            const prevX = unit.x;
+                            const prevY = unit.y;
+                            const moveDist = getEffectiveSpeed(unit) * dt;
+                            // Move towards waypoint/target
+                            unit.x += (dx / dTotal) * moveDist;
+                            unit.y += (dy / dTotal) * moveDist;
+                            enforceRiverBridgeConstraint(unit, prevX, prevY);
+                        }
                     }
                 }
-            } else {
-                // --- STATE: MOVING (Chasing target) ---
-                // Instruction: "Force l'unité à réactiver sa vitesse"
-                if (unit.speedPxPerSec <= 0) {
-                    unit.state = 'idle';
-                    return unit;
-                }
+            }
+        }
+        // --- CASE B: NO TARGET (MARCHE / OBJECTIVE) ---
+        else {
+            if (unit.state !== 'moving') {
+                // Should be moving if not idle/stunned
                 unit.state = 'moving';
+            }
 
-                unit.state = 'moving';
+            if (getEffectiveSpeed(unit) > 0) {
+                // Move towards enemy King
+                const targetY = unit.team === Team.BLUE ? 50 : 750;
 
                 const nextWaypoint = getNextWaypoint(
                     unit.x, unit.y, unit.lane, unit.team,
                     false,
-                    target.y
+                    targetY
                 );
 
-                let destX = target.x;
-                let destY = target.y;
-
                 if (nextWaypoint) {
-                    destX = nextWaypoint.x;
-                    destY = nextWaypoint.y;
-                }
+                    const dx = nextWaypoint.x - unit.x;
+                    const dy = nextWaypoint.y - unit.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const moveDist = getEffectiveSpeed(unit) * dt;
 
-                const dx = destX - unit.x;
-                const dy = destY - unit.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist > 0) {
-                    const effectiveSpeed = getEffectiveSpeed(unit);
-                    let moveDist = effectiveSpeed * dt;
-
-                    // Stop at exact attack range
-                    const desiredDist = distanceToTargetEdge - effectiveAttackRange;
-                    // Actually we want to move closer until distanceToTargetEdge <= effectiveAttackRange
-                    // So we move 'moveDist' pixels closer. 
-                    // But if moveDist > (currentDistToEdge - attackRange), clamp it.
-                    // Wait, logic:
-                    // dist is Center-Center.
-                    // We want Center-Center = target.radius + unit.radius + effectiveAttackRange.
-                    // current Center-Center = dist.
-                    // We need to travel: dist - (target.radius + unit.radius + effectiveAttackRange).
-
-                    const travelNeeded = dist - (target.radius + unit.radius + effectiveAttackRange);
-
-                    if (travelNeeded < moveDist) {
-                        moveDist = Math.max(0, travelNeeded);
+                    if (dist > 0) {
+                        const prevX = unit.x;
+                        const prevY = unit.y;
+                        unit.x += (dx / dist) * moveDist;
+                        unit.y += (dy / dist) * moveDist;
+                        enforceRiverBridgeConstraint(unit, prevX, prevY);
                     }
-
-                    const moveX = (dx / dist) * moveDist;
-                    const moveY = (dy / dist) * moveDist;
-
-                    const nextX = unit.x + moveX;
-                    const nextY = unit.y + moveY;
-
-                    // === RIVER OBSTACLE LOGIC ===
-                    // River Y bounds: 360 to 440
-                    // Bridge X bounds: 
-                    // Left: 140-180 (Center 160, width 40)
-                    // Right: 300-340 (Center 320, width 40)
-                    const BRIDGE_WIDTH_HALF = 25; // slightly lenient
-                    const LEFT_BRIDGE_X = 160;
-                    const RIGHT_BRIDGE_X = 320;
-
-                    const inRiverZone = (nextY > 360 && nextY < 440);
-                    const onLeftBridge = Math.abs(nextX - LEFT_BRIDGE_X) < BRIDGE_WIDTH_HALF;
-                    const onRightBridge = Math.abs(nextX - RIGHT_BRIDGE_X) < BRIDGE_WIDTH_HALF;
-
-                    if (inRiverZone && !onLeftBridge && !onRightBridge) {
-                        // COLLISION WITH RIVER!
-                        // Block movement. logic: "Slide" or just Stop Y.
-                        // For simplicity: Allow X movement, Block Y movement if it enters river.
-                        // But since we are moving towards waypoint (which should be correct), 
-                        // this acts as a failsafe.
-
-                        // If pathfinding is correct, this shouldn't trigger often.
-                        // But if it does, we clamp Y to the bank.
-                        if (unit.y <= 360) unit.y = Math.min(nextY, 360);
-                        else if (unit.y >= 440) unit.y = Math.max(nextY, 440);
-
-                        // Allow X movement (sliding along bank)
-                        unit.x = nextX;
-                    } else {
-                        unit.x = nextX;
-                        unit.y = nextY;
-                    }
+                } else {
+                    // Straight to end
+                    const prevX = unit.x;
+                    const prevY = unit.y;
+                    const moveDist = getEffectiveSpeed(unit) * dt;
+                    unit.y += unit.team === Team.BLUE ? -moveDist : moveDist;
+                    enforceRiverBridgeConstraint(unit, prevX, prevY);
                 }
-            }
-        } else {
-            // --- NO TARGET: Move logic (Capture buildings going to bridge) ---
-            if (unit.speedPxPerSec <= 0) {
-                unit.state = 'idle';
-                return unit;
-            }
-
-            unit.state = 'moving';
-
-            // Set "Target Y" as Enemy King Y (approx)
-            const targetY = unit.team === Team.BLUE ? 50 : 750;
-
-            const nextWaypoint = getNextWaypoint(
-                unit.x, unit.y, unit.lane, unit.team,
-                false,
-                targetY
-            );
-
-            if (nextWaypoint) {
-                // Follow lane
-                const dx = nextWaypoint.x - unit.x;
-                const dy = nextWaypoint.y - unit.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const moveDist = getEffectiveSpeed(unit) * dt;
-
-                if (dist > 0) {
-                    unit.x += (dx / dist) * moveDist;
-                    unit.y += (dy / dist) * moveDist;
-                }
-            } else {
-                // End of path -> Move straight Y
-                const moveDist = getEffectiveSpeed(unit) * dt;
-                unit.y += unit.team === Team.BLUE ? -moveDist : moveDist;
             }
         }
+
         return unit;
     });
 

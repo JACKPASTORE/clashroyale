@@ -1,4 +1,5 @@
 import { GameState, Team } from './types';
+import { DEBUG_LOGS } from './debug';
 
 export const shuffle = (array: string[]) => {
     const arr = [...array];
@@ -32,8 +33,10 @@ export const playCard = (state: GameState, cardId: string, team: Team): GameStat
 
     const teamDeck = newState.deck[team];
 
-    console.log(`[Deck] ${team} playing ${cardId}`);
-    console.log(`[Deck] Before - Hand: [${teamDeck.hand}], Queue: [${teamDeck.drawPile}]`);
+    if (DEBUG_LOGS) {
+        console.log(`[Deck] ${team} playing ${cardId}`);
+        console.log(`[Deck] Before - Hand: [${teamDeck.hand}], Queue: [${teamDeck.drawPile}]`);
+    }
 
     // 1. Find index of played card
     const cardIndex = teamDeck.hand.indexOf(cardId);
@@ -49,11 +52,11 @@ export const playCard = (state: GameState, cardId: string, team: Team): GameStat
     if (teamDeck.drawPile.length > 0) {
         const nextInQueue = teamDeck.drawPile.shift()!;
         teamDeck.hand[cardIndex] = nextInQueue; // Replace in-place
-        console.log(`[Deck] Slot ${cardIndex} filled by ${nextInQueue}`);
+        if (DEBUG_LOGS) console.log(`[Deck] Slot ${cardIndex} filled by ${nextInQueue}`);
     } else {
         // No cards left to draw? Remove this slot.
         teamDeck.hand.splice(cardIndex, 1);
-        console.log(`[Deck] Slot ${cardIndex} empty (no cards in queue)`);
+        if (DEBUG_LOGS) console.log(`[Deck] Slot ${cardIndex} empty (no cards in queue)`);
     }
 
     // 3. Add played card to BACK of queue
@@ -62,7 +65,9 @@ export const playCard = (state: GameState, cardId: string, team: Team): GameStat
     // 4. Update nextCard indicator
     teamDeck.nextCard = teamDeck.drawPile[0] || null;
 
-    console.log(`[Deck] After - Hand: [${teamDeck.hand}], Queue: [${teamDeck.drawPile}]`);
+    if (DEBUG_LOGS) {
+        console.log(`[Deck] After - Hand: [${teamDeck.hand}], Queue: [${teamDeck.drawPile}]`);
+    }
 
     return newState;
 };
@@ -91,7 +96,7 @@ export const drawCard = (state: GameState, team: Team): GameState => {
         const drawnCard = teamDeck.drawPile.shift()!;
         teamDeck.hand.push(drawnCard);
         teamDeck.nextCard = teamDeck.drawPile[0] || null;
-        console.log(`[Deck] ${team} drew ${drawnCard}, hand size: ${teamDeck.hand.length}`);
+        if (DEBUG_LOGS) console.log(`[Deck] ${team} drew ${drawnCard}, hand size: ${teamDeck.hand.length}`);
     }
 
     return newState;

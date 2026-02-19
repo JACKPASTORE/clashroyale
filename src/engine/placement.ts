@@ -4,6 +4,15 @@ import { getCardById } from '../data/load';
 import { playCard } from './deck';
 import { isValidPlacement } from './placement-validation';
 import { getLaneForSpawn } from './waypoints';
+import { DEBUG_LOGS } from './debug';
+
+const getRangePxForCard = (card: Card): number => {
+    const base = RANGE_MAP[card.range];
+    // Overrides pour garder des proportions "type Clash" sans casser toutes les portées globales.
+    if (card.id === 'sarah_princess') return 220; // Princesse = très longue portée
+    if (card.id === 'david_archer_stylet') return 180; // Archer longue portée mais moins que Sarah
+    return base;
+};
 
 export const canPlaceCard = (
     card: Card,
@@ -48,7 +57,7 @@ export const placeCard = (
     y: number,
     team: Team
 ): GameState => {
-    console.log('[Placement] placeCard called:', { cardId, x, y, team });
+    if (DEBUG_LOGS) console.log('[Placement] placeCard called:', { cardId, x, y, team });
 
     const card = getCardById(cardId);
     if (!card) {
@@ -56,7 +65,7 @@ export const placeCard = (
         return state;
     }
 
-    console.log('[Placement] Card found:', card.name, 'cost:', card.elixirCost);
+    if (DEBUG_LOGS) console.log('[Placement] Card found:', card.name, 'cost:', card.elixirCost);
 
     // Check elixir
     if (state.elixir[team] < card.elixirCost) {
@@ -70,7 +79,7 @@ export const placeCard = (
         return state;
     }
 
-    console.log('[Placement] Validation passed, spawning unit...');
+    if (DEBUG_LOGS) console.log('[Placement] Validation passed, spawning unit...');
 
     let newState = { ...state };
 
@@ -86,7 +95,7 @@ export const placeCard = (
 
         if (duoAbility) {
             // === DUO SPAWN LOGIN ===
-            console.log('[Placement] Spawning Duo Unit:', card.name);
+            if (DEBUG_LOGS) console.log('[Placement] Spawning Duo Unit:', card.name);
             const params = duoAbility.params || {};
 
             // Direction offset based on team (Blue goes up -Y, Red goes down +Y)
@@ -137,7 +146,7 @@ export const placeCard = (
             };
 
             newState.units.push(frontUnit, backUnit);
-            console.log(`[Placement] Spawned Duo: Front (${frontUnit.hp}hp) & Back (${backUnit.hp}hp)`);
+            if (DEBUG_LOGS) console.log(`[Placement] Spawned Duo: Front (${frontUnit.hp}hp) & Back (${backUnit.hp}hp)`);
 
         } else {
             // === STANDARD SINGLE SPAWN ===
@@ -152,7 +161,7 @@ export const placeCard = (
                 cardId,
                 dps: card.dps,
                 speedPxPerSec: SPEED_MAP[card.speed],
-                rangePx: RANGE_MAP[card.range],
+                rangePx: getRangePxForCard(card),
                 targetType: card.targets,
                 lastAttackTime: 0,
                 state: 'idle' as const,
@@ -162,11 +171,11 @@ export const placeCard = (
             };
 
             newState.units.push(unit);
-            console.log(`[Placement] Spawned ${card.name} at (${x}, ${y}) in ${lane} lane`);
+            if (DEBUG_LOGS) console.log(`[Placement] Spawned ${card.name} at (${x}, ${y}) in ${lane} lane`);
         }
     } else if (card.type === UnitType.SPELL) {
         // Handle spells (e.g., Alex's goblin barrel)
-        console.log(`[Placement] Cast spell ${card.name} at (${x}, ${y})`);
+        if (DEBUG_LOGS) console.log(`[Placement] Cast spell ${card.name} at (${x}, ${y})`);
         // For MVP, spells are handled separately (could trigger abilities)
         // Simplified: spawn goblins near enemy tower for Alex
         // Simplified: spawn transparent/flying barrel which waits 2s then spawns goblins
@@ -194,7 +203,7 @@ export const placeCard = (
                 lane: getLaneForSpawn(x)
             };
             newState.units.push(barrel);
-            console.log(`[Spell] Cast Alex Barrel at (${x}, ${y}) - waiting 2s`);
+            if (DEBUG_LOGS) console.log(`[Spell] Cast Alex Barrel at (${x}, ${y}) - waiting 2s`);
         }
     }
 

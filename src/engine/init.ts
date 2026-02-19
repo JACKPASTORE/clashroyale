@@ -11,14 +11,15 @@ export const createInitialState = (playerDeckIds: string[]): GameState => {
     return {
         towers: [
             // BLUE TEAM (Player) - Bottom
-            { id: 'blue_king', team: Team.BLUE, type: 'king', x: 240, y: 750, hp: 4000, maxHp: 4000, radius: 25, dps: 120, rangePx: 180, lastAttackTime: 0 },
-            { id: 'blue_left', team: Team.BLUE, type: 'princess', x: 80, y: 650, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
-            { id: 'blue_right', team: Team.BLUE, type: 'princess', x: 400, y: 650, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+            { id: 'blue_king', team: Team.BLUE, type: 'king', x: 240, y: 720, hp: 4000, maxHp: 4000, radius: 25, dps: 120, rangePx: 140, lastAttackTime: 0 },
+            // Princess towers closer to river so they can start shooting shortly after bridge
+            { id: 'blue_left', team: Team.BLUE, type: 'princess', x: 80, y: 540, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+            { id: 'blue_right', team: Team.BLUE, type: 'princess', x: 400, y: 540, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
 
             // RED TEAM (Enemy) - Top
-            { id: 'red_king', team: Team.RED, type: 'king', x: 240, y: 50, hp: 4000, maxHp: 4000, radius: 25, dps: 120, rangePx: 180, lastAttackTime: 0 },
-            { id: 'red_left', team: Team.RED, type: 'princess', x: 80, y: 150, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
-            { id: 'red_right', team: Team.RED, type: 'princess', x: 400, y: 150, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+            { id: 'red_king', team: Team.RED, type: 'king', x: 240, y: 80, hp: 4000, maxHp: 4000, radius: 25, dps: 120, rangePx: 140, lastAttackTime: 0 },
+            { id: 'red_left', team: Team.RED, type: 'princess', x: 80, y: 260, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
+            { id: 'red_right', team: Team.RED, type: 'princess', x: 400, y: 260, hp: 2500, maxHp: 2500, radius: 20, dps: 100, rangePx: 160, lastAttackTime: 0 },
         ],
         units: [],
         projectiles: [], // Start with empty projectiles

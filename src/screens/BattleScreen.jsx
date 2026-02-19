@@ -10,6 +10,7 @@ import { getAllWaypoints } from '../engine/waypoints';
 import ArenaLayout from '../components/battle/ArenaLayout';
 import ElixirBar from '../components/battle/ElixirBar';
 import { supabase } from '../lib/supabaseClient';
+import KeyedImage from '../components/KeyedImage';
 
 // Load deck from localStorage
 const getSavedDeck = () => {
@@ -36,6 +37,8 @@ const BattleScreen = ({ onExit, gameOptions }) => {
     const gameStateRef = useRef(null);
     const audioRef = useRef(null);
     const [isMuted, setIsMuted] = useState(false);
+    const [audioUnlocked, setAudioUnlocked] = useState(false);
+    const sfxCacheRef = useRef(new Map());
     const channelRef = useRef(null);
 
     // Network Stats
@@ -226,19 +229,23 @@ const BattleScreen = ({ onExit, gameOptions }) => {
     }, [isHost]);
 
 
+    // Unlock audio after first user interaction (required by most browsers)
+    useEffect(() => {
+        const unlock = () => setAudioUnlocked(true);
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+            window.removeEventListener('pointerdown', unlock);
+            window.removeEventListener('keydown', unlock);
+        };
+    }, []);
+
     // Audio Init
     useEffect(() => {
         audioRef.current = new Audio('/assets/music/battle.mp3');
         audioRef.current.loop = true;
         audioRef.current.volume = 0.3; // Lower volume
-
-        const playPromise = audioRef.current.play();
-
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log("Audio autoplay failed (user interaction needed):", error);
-            });
-        }
+        audioRef.current.preload = 'auto';
 
         return () => {
             if (audioRef.current) {
@@ -251,13 +258,13 @@ const BattleScreen = ({ onExit, gameOptions }) => {
     // Handle Mute Toggle
     useEffect(() => {
         if (audioRef.current) {
-            if (isMuted) {
+            if (isMuted || !audioUnlocked) {
                 audioRef.current.pause();
             } else {
                 audioRef.current.play().catch(e => console.warn("Play failed:", e));
             }
         }
-    }, [isMuted]);
+    }, [isMuted, audioUnlocked]);
 
     // Arena Click with validation
     const handleArenaTap = (e) => {
@@ -325,6 +332,10 @@ const BattleScreen = ({ onExit, gameOptions }) => {
 
     useEffect(() => {
         if (!gameState || !gameState.units) return;
+        if (isMuted || !audioUnlocked) {
+            prevUnitsRef.current = gameState.units;
+            return;
+        }
 
         const currentUnits = gameState.units;
         const prevUnits = prevUnitsRef.current || [];
@@ -337,20 +348,35 @@ const BattleScreen = ({ onExit, gameOptions }) => {
             // Get card data for sound
             const card = getCardById(unit.cardId);
             if (card && card.visuals && card.visuals.spawnSound) {
-                if (!isMuted) {
-                    try {
-                        const sfx = new Audio(card.visuals.spawnSound);
-                        sfx.volume = 0.6;
-                        sfx.play().catch(e => console.warn("Spawn SFX failed", e));
-                    } catch (err) {
-                        console.warn("Could not play spawn sound", err);
+                try {
+                    const url = card.visuals.spawnSound;
+                    // Use a preloaded base element, but clone for playback to avoid
+                    // "already playing"/seeking issues and weird range errors.
+                    let base = sfxCacheRef.current.get(url);
+                    if (!base) {
+                        base = new Audio(url);
+                        base.preload = 'auto';
+                        sfxCacheRef.current.set(url, base);
                     }
+
+                    const sfx = base.cloneNode(true);
+                    sfx.volume = 0.6;
+
+                    // Only seek if metadata is ready (prevents DOMException)
+                    if (sfx.readyState > 0) {
+                        try { sfx.currentTime = 0; } catch {}
+                    }
+
+                    // Swallow failures silently (common on autoplay-restricted environments)
+                    sfx.play().catch(() => {});
+                } catch (err) {
+                    // Ignore SFX failures: not gameplay-critical.
                 }
             }
         });
 
         prevUnitsRef.current = currentUnits;
-    }, [gameState, isMuted]);
+    }, [gameState, isMuted, audioUnlocked]);
 
     // Track mouse position for ghost preview
     const handleMouseMove = (e) => {
@@ -421,6 +447,9 @@ const BattleScreen = ({ onExit, gameOptions }) => {
 
     // Derived for UI
     const myTeam = isClient ? Team.RED : Team.BLUE;
+    const myPrincessLeft = gameState.towers?.find(t => t.team === myTeam && t.type === 'princess' && t.x < 240);
+    const myPrincessRight = gameState.towers?.find(t => t.team === myTeam && t.type === 'princess' && t.x >= 240);
+    const myKing = gameState.towers?.find(t => t.team === myTeam && t.type === 'king');
 
     return (
         <motion.div
@@ -549,6 +578,19 @@ const BattleScreen = ({ onExit, gameOptions }) => {
                 </motion.div>
             </div>
 
+            {/* PLAYER TOWER HP (always visible) */}
+            <div className="absolute bottom-24 left-0 right-0 z-30 pointer-events-none flex items-center justify-between px-3">
+                <div className="bg-black/55 text-white text-xs font-black px-2 py-1 rounded-lg border border-white/10">
+                    L ❤️ {myPrincessLeft ? Math.ceil(myPrincessLeft.hp) : '-'}
+                </div>
+                <div className="bg-black/55 text-white text-xs font-black px-2 py-1 rounded-lg border border-white/10">
+                    K ❤️ {myKing ? Math.ceil(myKing.hp) : '-'}
+                </div>
+                <div className="bg-black/55 text-white text-xs font-black px-2 py-1 rounded-lg border border-white/10">
+                    R ❤️ {myPrincessRight ? Math.ceil(myPrincessRight.hp) : '-'}
+                </div>
+            </div>
+
             {/* Network Debug Overlay */}
             {isOnline && (
                 <div className="absolute top-16 left-4 z-50 bg-black/50 text-white text-xs p-2 rounded pointer-events-none">
@@ -588,12 +630,12 @@ const BattleScreen = ({ onExit, gameOptions }) => {
                 style={{ background: 'linear-gradient(to top, #1C1C1C 80%, transparent)' }}
             >
                 {/* Elixir Bar */}
-                <div className="w-full px-4 pt-2">
+                <div className="w-full px-3 pt-1">
                     <ElixirBar elixir={gameState.elixir[myTeam]} />
                 </div>
 
                 {/* Card Bar */}
-                <div className="w-full px-2 pb-2 h-24 flex items-end justify-between gap-2">
+                <div className="w-full px-2 pb-1 h-20 flex items-end justify-between gap-2">
 
                     {/* LEFT: "Suivant" + Next Card */}
                     <div className="flex flex-col items-center justify-end h-full pb-1">
@@ -657,10 +699,16 @@ const CardSlotComponent = ({ cardId, isNext = false, isSelected = false, onSelec
                 bg-[#4b5563]`}
         >
             {/* Placeholder Card Art */}
-            <div className={`w-full h-full relative flex flex-col items-center justify-center ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-black' : 'bg-[#9ca3af]'}`}>
+            <div className={`w-full h-full relative flex flex-col items-center justify-center ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-[#1f2937]' : 'bg-[#9ca3af]'}`}>
                 {/* Visual Icon */}
                 {card.visuals && card.visuals.icon && !card.visuals.icon.includes('placeholder') ? (
-                    <img src={card.visuals.icon} className="absolute inset-0 w-full h-full object-cover opacity-90" alt={card.name} />
+                    <KeyedImage
+                        src={card.visuals.icon}
+                        alt={card.name}
+                        className="absolute inset-0 w-full h-full object-contain p-1"
+                        style={{ filter: 'contrast(1.05) saturate(1.05)' }}
+                        maxSize={256}
+                    />
                 ) : (
                     <div className="flex-1 flex items-center justify-center">
                         <span className="text-2xl drop-shadow-md opacity-80">{emoji}</span>
@@ -670,7 +718,7 @@ const CardSlotComponent = ({ cardId, isNext = false, isSelected = false, onSelec
                 {/* Card Name */}
                 {!isNext && (
                     <div className="absolute top-0 left-0 right-0 bg-black/80 py-1 z-20">
-                        <span className="text-[11px] font-black text-yellow-300 text-center block leading-tight uppercase">
+                        <span className="text-[10px] font-black text-yellow-300 text-center block leading-tight uppercase">
                             {card.name}
                         </span>
                     </div>

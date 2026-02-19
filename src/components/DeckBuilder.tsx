@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getAllCards, getCardById } from '../data/load';
 import { Card } from '../engine/types';
+import CardDetailsModal from './CardDetailsModal';
+import CardActionMenu from './CardActionMenu';
 
 interface DeckBuilderProps {
     onBack: () => void;
 }
 
 const DeckBuilder: React.FC<DeckBuilderProps> = ({ onBack }) => {
+    // 1. Gestion du Deck
     const [deck, setDeck] = useState<string[]>([]);
     const allCards = getAllCards();
 
@@ -34,12 +37,76 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({ onBack }) => {
         onBack();
     };
 
+
+    // 2. Gestion des États Clic & Menus
+    // "Création d'un État Intermédiaire : Crée une variable globale selectedCard"
+    const [menuCardId, setMenuCardId] = useState<string | null>(null); // Pour le Menu "Action"
+    const [detailsCardId, setDetailsCardId] = useState<string | null>(null); // Pour la Modal "Infos"
+
+    // "Redirection du Clic : Remplace l'action actuelle... par handleCardClick"
+    const handleCardClick = (id: string) => {
+        console.log('[DeckBuilder] handleCardClick called. Opening Menu for:', id);
+        // "Enregistre les données... dans selectedCard"
+        setMenuCardId(id);
+    };
+
+    // Actions du Menu
+    const handleMenuInfo = () => {
+        // "Bouton 2 (Infos) : Ouvre une seconde vue"
+        if (menuCardId) {
+            setDetailsCardId(menuCardId);
+            setMenuCardId(null);
+        }
+    };
+
+    const handleMenuAction = () => {
+        // "Bouton 1 (Action) : Appelle ta fonction de retrait/ajout et ferme"
+        if (menuCardId) {
+            toggleCard(menuCardId); // Ma fonction existante 'toggleCard' gère add/remove
+            setMenuCardId(null);
+        }
+    };
+
+    const handleMenuCancel = () => {
+        // "Bouton 3 (Annuler) : Ferme simplement"
+        setMenuCardId(null);
+    }
+
+    // Objets Cartes pour l'affichage
+    const menuCard = menuCardId ? getCardById(menuCardId) : null;
+    const detailsCard = detailsCardId ? getCardById(detailsCardId) : null;
     const avgElixir = deck.length > 0
         ? (deck.reduce((sum, id) => sum + (getCardById(id)?.elixirCost || 0), 0) / deck.length).toFixed(1)
         : '0.0';
 
     return (
-        <div className="w-full h-full bg-slate-900 text-white flex flex-col">
+        <div className="w-full h-full bg-slate-900 text-white flex flex-col relative">
+
+            {/* --- MENUS & POPUPS --- */}
+
+            {/* 1. Le Menu de Choix (Prioritaire au clic) */}
+            {menuCard && (
+                <CardActionMenu
+                    card={menuCard}
+                    onClose={handleMenuCancel}
+                    onInfo={handleMenuInfo}
+                    onAction={handleMenuAction}
+                    actionLabel={deck.includes(menuCard.id) ? 'Retirer' : 'Ajouter'}
+                />
+            )}
+
+            {/* 2. La Fenêtre Infos (Secondaire) */}
+            {detailsCard && (
+                <CardDetailsModal
+                    card={detailsCard}
+                    onClose={() => setDetailsCardId(null)}
+                    onToggleDeck={(id) => { toggleCard(id); setDetailsCardId(null); }}
+                    isInDeck={deck.includes(detailsCard.id)}
+                />
+            )}
+
+            {/* --- UI PRINCIPALE --- */}
+
             {/* Header */}
             <div className="p-4 bg-slate-800 shadow-md flex justify-between items-center z-10">
                 <div>
@@ -68,8 +135,9 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({ onBack }) => {
                     return (
                         <div
                             key={i}
-                            onClick={() => card && toggleCard(card.id)}
-                            className="w-12 h-16 bg-slate-800 border border-slate-600 rounded flex items-center justify-center cursor-pointer hover:bg-red-900/50 transition-colors relative"
+                            // "Remplace l'action actuelle du clic... par une fonction handleCardClick"
+                            onClick={() => card && handleCardClick(card.id)}
+                            className="w-12 h-16 bg-slate-800 border border-slate-600 rounded flex items-center justify-center cursor-pointer hover:bg-slate-700 transition-colors relative"
                         >
                             {card ? (
                                 <>
@@ -91,7 +159,8 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({ onBack }) => {
                         return (
                             <div
                                 key={card.id}
-                                onClick={() => toggleCard(card.id)}
+                                // "Remplace l'action actuelle du clic... par une fonction handleCardClick"
+                                onClick={() => handleCardClick(card.id)}
                                 className={`aspect-[3/4] rounded-lg border-2 relative flex flex-col items-center justify-center cursor-pointer transition-all
                             ${inDeck ? 'border-green-500 bg-green-900/20 opacity-50' : 'border-slate-600 bg-slate-800 hover:border-yellow-500'}
                          `}

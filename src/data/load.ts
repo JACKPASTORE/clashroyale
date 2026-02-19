@@ -14,6 +14,7 @@ const normalizeSpeed = (s: string): Speed => {
     if (lower.includes('très_rapide')) return Speed.VERY_FAST;
     if (lower.includes('rapide')) return Speed.FAST;
     if (lower.includes('moyenne')) return Speed.MEDIUM;
+    if (lower.includes('très_lent')) return Speed.VERY_SLOW;
     if (lower.includes('lent')) return Speed.SLOW;
     if (lower.includes('aucune')) return Speed.NONE;
     return Speed.MEDIUM; // Default

@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 
 const ElixirBar = ({ elixir }) => {
     return (
-        <div className="w-full h-16 bg-[#1a1a1a] flex items-center px-2 relative border-t-4 border-[#000]">
+        <div className="w-full h-12 bg-[#1a1a1a] flex items-center px-2 relative border-t-4 border-[#000]">
 
             {/* Bar Container */}
-            <div className="flex-1 h-8 bg-black/60 rounded-full relative overflow-hidden border-2 border-black/80 shadow-inner mx-2">
+            <div className="flex-1 h-6 bg-black/60 rounded-full relative overflow-hidden border-2 border-black/80 shadow-inner mx-2">
                 {/* Segments Guide */}
                 <div className="absolute inset-0 flex w-full h-full px-1 gap-[2px] opacity-10 z-0">
                     {[...Array(10)].map((_, i) => (
@@ -39,14 +39,14 @@ const ElixirBar = ({ elixir }) => {
 
                 {/* Numeric Display Overlay */}
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-20">
-                    <span className="text-white font-black text-sm drop-shadow-md italic">{Math.floor(elixir)}</span>
+                    <span className="text-white font-black text-xs drop-shadow-md italic">{Math.floor(elixir)}</span>
                 </div>
             </div>
 
             {/* Elixir Icon/Indicator */}
-            <div className="w-12 h-12 bg-[#800080] rounded-full border-2 border-[#E1BEE7] flex items-center justify-center shadow-lg relative z-20">
-                <div className="w-6 h-8 bg-gradient-to-b from-[#E040FB] to-[#7B1FA2] rounded-b-xl rounded-tl-xl shadow-inner"></div>
-                <div className="absolute -bottom-1 text-white font-black text-[10px] bg-black/50 px-1 rounded">Elixir</div>
+            <div className="w-10 h-10 bg-[#800080] rounded-full border-2 border-[#E1BEE7] flex items-center justify-center shadow-lg relative z-20">
+                <div className="w-5 h-7 bg-gradient-to-b from-[#E040FB] to-[#7B1FA2] rounded-b-xl rounded-tl-xl shadow-inner"></div>
+                <div className="absolute -bottom-1 text-white font-black text-[9px] bg-black/50 px-1 rounded">Elixir</div>
             </div>
 
         </div>

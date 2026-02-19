@@ -3,11 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, Copy, Save } from 'lucide-react';
 import CardSlot from '../components/CardSlot';
 import { getAllCards, getCardById } from '../data/load';
+import CardActionMenu from '../components/CardActionMenu';
+import CardDetailsModal from '../components/CardDetailsModal';
+import KeyedImage from '../components/KeyedImage';
+import { DEBUG_LOGS } from '../engine/debug';
 
 const DecksScreen = () => {
     const [activeDeck, setActiveDeck] = useState(1);
     const [deck, setDeck] = useState([]);
     const allCards = getAllCards();
+
+    // Menu / Modals (UX: pas d'ajout/retrait immédiat au clic)
+    const [menuCardId, setMenuCardId] = useState(null);
+    const [detailsCardId, setDetailsCardId] = useState(null);
 
     // Load deck from localStorage on mount
     useEffect(() => {
@@ -25,7 +33,7 @@ const DecksScreen = () => {
     useEffect(() => {
         if (deck.length > 0) {
             localStorage.setItem('albertRoyale.deck.v1', JSON.stringify(deck));
-            console.log('[DecksScreen] Auto-saved deck:', deck);
+            if (DEBUG_LOGS) console.log('[DecksScreen] Auto-saved deck:', deck);
         }
     }, [deck]);
 
@@ -40,6 +48,28 @@ const DecksScreen = () => {
     const removeCardFromDeck = (cardId) => {
         setDeck(deck.filter(id => id !== cardId));
     };
+
+    const handleCardClick = (cardId) => {
+        setMenuCardId(cardId);
+    };
+
+    const handleMenuInfo = () => {
+        if (!menuCardId) return;
+        setDetailsCardId(menuCardId);
+        setMenuCardId(null);
+    };
+
+    const handleMenuAction = () => {
+        if (!menuCardId) return;
+        if (deck.includes(menuCardId)) removeCardFromDeck(menuCardId);
+        else addCardToDeck(menuCardId);
+        setMenuCardId(null);
+    };
+
+    const handleMenuClose = () => setMenuCardId(null);
+
+    const menuCard = menuCardId ? getCardById(menuCardId) : null;
+    const detailsCard = detailsCardId ? getCardById(detailsCardId) : null;
 
     // Save deck to localStorage
     const saveDeck = () => {
@@ -57,6 +87,30 @@ const DecksScreen = () => {
 
     return (
         <div className="w-full h-full bg-[#1C2735] flex flex-col pt-14 font-sans select-none">
+
+            {/* --- MENUS & POPUPS --- */}
+            {menuCard && (
+                <CardActionMenu
+                    card={menuCard}
+                    onClose={handleMenuClose}
+                    onInfo={handleMenuInfo}
+                    onAction={handleMenuAction}
+                    actionLabel={deck.includes(menuCard.id) ? 'Retirer' : 'Ajouter'}
+                />
+            )}
+
+            {detailsCard && (
+                <CardDetailsModal
+                    card={detailsCard}
+                    onClose={() => setDetailsCardId(null)}
+                    onToggleDeck={(id) => {
+                        if (deck.includes(id)) removeCardFromDeck(id);
+                        else addCardToDeck(id);
+                        setDetailsCardId(null);
+                    }}
+                    isInDeck={deck.includes(detailsCard.id)}
+                />
+            )}
 
             {/* HEADER TABS (Decks / Collection) */}
             <div className="flex w-full bg-[#223042] border-b-4 border-black/30 pt-1 px-1 pb-0 z-20 shadow-md">
@@ -148,7 +202,7 @@ const DecksScreen = () => {
                                 return (
                                     <div
                                         key={i}
-                                        onClick={() => card && removeCardFromDeck(card.id)}
+                                        onClick={() => card && handleCardClick(card.id)}
                                         className={`aspect-[3/4] rounded-lg border-2 relative flex flex-col items-center justify-center transition-all bg-slate-800
                                             ${card
                                                 ? 'border-yellow-500 cursor-pointer hover:border-red-500 bg-slate-700'
@@ -157,9 +211,14 @@ const DecksScreen = () => {
                                         {card ? (
                                             <>
                                                 {/* Visual Icon */}
-                                                <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-white' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
+                                                <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-transparent' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
                                                     {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
-                                                        <img src={card.visuals.icon} className="w-full h-full object-cover opacity-90" alt={card.name} />
+                                                        <KeyedImage
+                                                            src={card.visuals.icon}
+                                                            alt={card.name}
+                                                            className="w-full h-full object-cover opacity-90"
+                                                            maxSize={512}
+                                                        />
                                                     ) : (
                                                         <div className="w-full h-full flex items-center justify-center text-3xl">
                                                             {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
@@ -211,16 +270,21 @@ const DecksScreen = () => {
                             return (
                                 <div
                                     key={card.id}
-                                    onClick={() => addCardToDeck(card.id)}
+                                    onClick={() => handleCardClick(card.id)}
                                     className={`aspect-[3/4] rounded-lg border-2 relative flex flex-col items-center justify-center cursor-pointer transition-all
                                         ${inDeck
                                             ? 'bg-green-900/30 border-green-500 opacity-60'
                                             : 'bg-slate-700 border-slate-500 hover:border-yellow-400'}`}
                                 >
                                     {/* Visual Icon */}
-                                    <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-white' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
+                                    <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-transparent' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
                                         {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
-                                            <img src={card.visuals.icon} className="w-full h-full object-cover opacity-90" alt={card.name} />
+                                            <KeyedImage
+                                                src={card.visuals.icon}
+                                                alt={card.name}
+                                                className="w-full h-full object-cover opacity-90"
+                                                maxSize={512}
+                                            />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-3xl">
                                                 {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}

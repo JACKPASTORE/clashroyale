@@ -10,8 +10,9 @@ const LoadingScreen = ({ onComplete }) => {
     }, [onComplete]);
 
     return (
-        <div className="absolute inset-0 bg-[url('/Users/alicepastore/.gemini/antigravity/brain/8be1d8ef-3d58-481d-8964-e91748d0cecd/clash_loading_v2_1769714038913.png')] bg-cover bg-center z-50 flex flex-col items-center justify-end pb-20">
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1220] via-[#112A4A] to-[#081D2B] z-50 flex flex-col items-center justify-end pb-20">
+            <div className="absolute inset-0 bg-[url('/bubbles.png')] bg-cover bg-center opacity-20"></div>
+            <div className="absolute inset-0 bg-black/35 backdrop-blur-[1px]"></div>
 
             <div className="relative z-10 w-4/5">
                 <div className="text-white font-black text-xl mb-4 text-center drop-shadow-md">
