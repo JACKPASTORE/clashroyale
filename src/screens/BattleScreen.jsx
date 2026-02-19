@@ -274,16 +274,19 @@ const BattleScreen = ({ onExit, gameOptions }) => {
         }
 
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (480 / rect.width);
-        const y = (e.clientY - rect.top) * (800 / rect.height);
+        let x = (e.clientX - rect.left) * (480 / rect.width);
+        let y = (e.clientY - rect.top) * (800 / rect.height);
+
+        // FLIP COORDINATES IF CLIENT (Mirrored View)
+        if (isClient) {
+            x = 480 - x;
+            y = 800 - y;
+        }
 
         // Validate placement
-        // Note: Client sees board mirrored? Or not?
-        // IF we mirror the board for Client, we must transform X/Y.
-        // CURRENTLY: Engine assumes Blue at Bottom (750), Red at Top (50).
-        // If Client is Red, they should ideally see themselves at bottom.
-        // MVP: Client plays as RED but sees themselves at Top? That's awkward.
-        // Let's assume standard view for now: Client is playing RED (Top).
+        // If Client is Red, they see themselves at bottom.
+        // Their Click at Bottom (Visual) -> Y=800 -> Math: 800 - 800 = 0 (Top).
+        // Red Zone is at Top (y < 350). So input flip is correct.
 
         if (!isValidPlacement(x, y, myTeam)) {
             console.warn('Invalid placement position');
@@ -295,7 +298,7 @@ const BattleScreen = ({ onExit, gameOptions }) => {
         setMousePos(null);
 
         if (isClient) {
-            // Send action to Host
+            // Send action to Host with mirrored (Correct Engine) coordinates
             channelRef.current.send({
                 type: 'broadcast',
                 event: 'client_action',
@@ -356,8 +359,14 @@ const BattleScreen = ({ onExit, gameOptions }) => {
             return;
         }
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (480 / rect.width);
-        const y = (e.clientY - rect.top) * (800 / rect.height);
+        let x = (e.clientX - rect.left) * (480 / rect.width);
+        let y = (e.clientY - rect.top) * (800 / rect.height);
+
+        if (isClient) {
+            x = 480 - x;
+            y = 800 - y;
+        }
+
         setMousePos({ x, y });
     };
 
@@ -434,14 +443,15 @@ const BattleScreen = ({ onExit, gameOptions }) => {
                     towers={gameState.towers}
                     units={gameState.units}
                     projectiles={gameState.projectiles} // Pass projectiles
+                    isMirrored={isClient}
                 />
 
                 {/* Ghost Preview Circle */}
                 {selectedCardId && mousePos && (
                     <svg className="absolute top-0 left-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
                         <circle
-                            cx={`${(mousePos.x / 480) * 100}%`}
-                            cy={`${(mousePos.y / 800) * 100}%`}
+                            cx={`${((isClient ? 480 - mousePos.x : mousePos.x) / 480) * 100}%`}
+                            cy={`${((isClient ? 800 - mousePos.y : mousePos.y) / 800) * 100}%`}
                             r="5%"
                             fill={getPlacementColor(isValidPlacement(mousePos.x, mousePos.y, myTeam))}
                             stroke="white"

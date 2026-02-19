@@ -77,43 +77,41 @@ export const getNextWaypoint = (
     forceBridge: boolean = false, // New param: if target is across river
     targetY?: number // New param: explicit target Y
 ): Waypoint | null => {
-    // 1. Force Bridge Alignment in River Zone
-    // If we are near river vertically but far from bridge horizontally, we MUST go to bridge.
+    // 1. Strict River & Bridge Logic
+    const RIVER_TOP_Y = 360;
+    const RIVER_BOTTOM_Y = 440;
+    const BRIDGE_WIDTH = 40; // Approx width to be "on" the bridge
+
     const BRIDGE_X = lane === 'left' ? LEFT_BRIDGE_X : RIGHT_BRIDGE_X;
-    const RIVER_Y = 400; // Exact river center
-    const SAFE_ZONE_Y = 100; // How far from river to start forcing bridge
+    const RIVER_Y = 400;
 
-    // Logic: If I am on one side, and target is on the other side... force bridge.
+    // Check if we need to cross the river
     let needsToCross = false;
-
     if (targetY !== undefined) {
         const mySide = currentY > RIVER_Y ? 'bottom' : 'top';
         const targetSide = targetY > RIVER_Y ? 'bottom' : 'top';
         if (mySide !== targetSide) needsToCross = true;
     } else {
-        // Default forward movement implies crossing eventually
-        needsToCross = true;
+        needsToCross = true; // Default behavior
     }
 
     if (needsToCross || forceBridge) {
-        // AM I AT THE BRIDGE YET?
-        // Define Bridge Box: X ± 20, Y ± 50 around center?
-        // Actually, just if I am vertically approaching river, I must align X first.
+        const distToRiverCenter = Math.abs(currentY - RIVER_Y);
+        const distToBridgeX = Math.abs(currentX - BRIDGE_X);
 
-        const distToRiver = Math.abs(currentY - RIVER_Y);
-
-        // If I'm "approaching" the river (e.g. within 200px) and NOT aligned X-wise
-        if (distToRiver < 250 && Math.abs(currentX - BRIDGE_X) > 10) {
-            // FORCE MOVING TO BRIDGE ENTRY
-            // Entry Y depends on team/direction. 
-            // Blue (Bottom going Up) -> Entry is 450.
-            // Red (Top going Down) -> Entry is 350.
+        // A. If I am approaching the river (within 150px) but NOT aligned with bridge
+        // Force movement to Bridge Entry Point BEFORE touching water
+        if (distToRiverCenter < 150 && distToBridgeX > BRIDGE_WIDTH / 2) {
+            // Determine Entry Y based on which side we are on
+            // If at bottom (>400), go to 450. If at top (<400), go to 350.
+            // This pulls them away from the river bank to align first.
             const entryY = currentY > RIVER_Y ? 450 : 350;
+            return { x: BRIDGE_X, y: entryY, lane, team };
+        }
 
-            // If I haven't passed the entry Y... target it.
-            // Or just target the Bridge X at my current Y? No, diagonals are okay.
-            // Target the Bridge Center.
-            return { x: BRIDGE_X, y: RIVER_Y, lane, team };
+        // B. If I am aligned with bridge, just cross (target the other side or bridge center)
+        if (distToRiverCenter < 50 && distToBridgeX <= BRIDGE_WIDTH / 2) {
+            // Continue forward handling
         }
     }
 

@@ -16,8 +16,8 @@ const getDistance = (e1: Entity, e2: Entity) => {
 };
 
 const getEnemies = (state: GameState, myTeam: Team): Entity[] => {
-    const units = state.units.filter(u => u.team !== myTeam);
-    const towers = state.towers.filter(t => t.team !== myTeam);
+    const units = state.units.filter(u => u.team !== myTeam && u.hp > 0);
+    const towers = state.towers.filter(t => t.team !== myTeam && t.hp > 0);
     return [...units, ...towers];
 };
 
@@ -137,75 +137,86 @@ export const step = (state: GameState, dt: number): GameState => {
             return unit; // Cannot move or attack
         }
 
-        // === 1. TARGETING (Sticky Aggro) ===
+        // === 1. TARGETING SYSTEM (Detailed Refresh) ===
+        // Instruction: "Dès qu'une cible est détruite... repasser en état Recherche"
+
         let target: Entity | null = null;
         let minDist = Infinity;
 
-        // A. Check current locked target
+        // A. Check Locked Target
         if (unit.targetId) {
             const allEntities: Entity[] = [...newState.units, ...newState.towers];
             const existing = allEntities.find(e => e.id === unit.targetId);
 
-            // Validate locked target (must be alive and valid)
+            // Validate: Must be alive and valid target
             if (existing && existing.hp > 0 && canTarget(unit, existing)) {
                 target = existing;
                 minDist = getDistance(unit, target);
             } else {
-                unit.targetId = undefined; // Lost target
+                // RESET: Target died or invalid. Immediate unlock.
+                unit.targetId = undefined;
+                target = null;
             }
         }
 
-        // B. Scan for new target if none locked
+        // B. Search (Tick System)
+        // Instruction: "Si cible nulle... lance une nouvelle vérification"
         if (!target) {
-            const enemies = getEnemies(state, unit.team); // Use 'state' for consistent snapshot or 'newState' for immediate
-            // Find closest valid enemy
+            // Note: We use 'newState.units' potentially to see updated HP if we want to be super strict, 
+            // but 'state' is safe for consistent frame behavior.
+            const enemies = getEnemies(state, unit.team);
+
             for (const e of enemies) {
                 if (!canTarget(unit, e)) continue;
                 const d = getDistance(unit, e);
+                // Simple closest unit logic
                 if (d < minDist) {
                     minDist = d;
                     target = e;
                 }
             }
+
             if (target) {
+                // LOCK: New target found
                 unit.targetId = target.id;
             }
         }
 
-        // === 2. ACTION LOGIC ===
+        // === 2. ACTION SYSTEM (Loop Decision) ===
+        // Instruction: "Si target_in_range FAUX... is_moving doit repasser à VRAI"
+
         if (target) {
-            // Calculate distance to edge of target (collision distance)
-            // Distance center-to-center minus radii
+            // We have a live, valid target.
+
             const distanceToTargetCenter = minDist;
             const distanceToTargetEdge = distanceToTargetCenter - target.radius - unit.radius;
 
-            // Attack if within range (using edge distance for buildings/large units)
-            // Melee range is usually very small (< 10), so edge distance <= rangePx works.
-            if (distanceToTargetEdge <= unit.rangePx) {
-                // --- ATTACK ---
+            const isMelee = unit.rangePx < 40;
+            const effectiveAttackRange = isMelee ? 5 : unit.rangePx;
+
+            // CHECK RANGE
+            if (distanceToTargetEdge <= effectiveAttackRange) {
+                // --- STATE: ATTACKING ---
                 unit.state = 'attacking';
+                // Stop movement implicitly by NOT entering move block
 
                 if (now - unit.lastAttackTime > HIT_COOLDOWN * 1000) {
                     unit.lastAttackTime = now;
                     const damage = unit.dps * HIT_COOLDOWN;
 
-                    // CHECK IF RANGED -> SPAWN PROJECTILE
-                    const isRanged = unit.rangePx > 50;
+                    // Projectile vs Instant
+                    const spawnProjectile = !isMelee;
                     const card = getCardById(unit.cardId);
+                    const visual = card?.visuals?.projectile || (spawnProjectile ? 'arrow' : undefined);
 
-                    // Ensure projectile visual is defined (or fallback for debugging)
-                    const visual = card?.visuals?.projectile || (isRanged ? 'arrow' : undefined);
-
-                    if (isRanged && visual) {
-                        // Spawn Projectile
-                        // console.log('Spawning projectile from', unit.id);
+                    if (spawnProjectile && visual) {
                         const proj = {
-                            id: `proj_${unit.id}_${now}_${Math.random()}`, // Unique ID
+                            id: `proj_${unit.id}_${now}_${Math.random()}`,
                             ownerId: unit.id,
                             team: unit.team,
                             targetId: target.id,
                             x: unit.x,
-                            y: unit.y - 15, // Spawn higher (weapon height)
+                            y: unit.y - 15,
                             startX: unit.x,
                             startY: unit.y - 15,
                             speed: card?.visuals.projectileSpeed || 400,
@@ -217,73 +228,121 @@ export const step = (state: GameState, dt: number): GameState => {
                         };
                         newProjectiles.push(proj);
                     } else {
-                        // INSTANT DAMAGE (Melee or no projectile visual)
-                        if ('cardId' in target) { // Unit
+                        // Instant Damage
+                        let targetDead = false;
+                        if ('cardId' in target) {
                             const u = newState.units.find(u => u.id === target!.id);
-                            if (u) u.hp -= damage;
-                        } else { // Tower
+                            if (u) {
+                                u.hp -= damage;
+                                if (u.hp <= 0) targetDead = true;
+                            }
+                        } else {
                             const t = newState.towers.find(t => t.id === target!.id);
-                            if (t) t.hp -= damage;
+                            if (t) {
+                                t.hp -= damage;
+                                if (t.hp <= 0) targetDead = true;
+                            }
+                        }
+
+                        // Optimization: If we killed it this frame, clear our lock immediately
+                        // so next frame we don't waste time checking a dead ID.
+                        if (targetDead) {
+                            unit.targetId = undefined;
                         }
                     }
 
-                    // OnAttackHit trigger (Only for melee? Or triggers later for projectile? keeping simple for now)
-                    if (ENABLE_ABILITIES && !isRanged) {
-                        // ... (Ability logic omitted for brevity in this chunk, safe to keep or remove as strict MVP)
+                    if (ENABLE_ABILITIES && isMelee) {
+                        // Ability trigger
                     }
                 }
             } else {
-                // --- MOVE towards target ---
+                // --- STATE: MOVING (Chasing target) ---
+                // Instruction: "Force l'unité à réactiver sa vitesse"
                 if (unit.speedPxPerSec <= 0) {
-                    unit.state = 'idle'; // Building cannot move
+                    unit.state = 'idle';
                     return unit;
                 }
+                unit.state = 'moving';
 
                 unit.state = 'moving';
 
-                // Pathfinding with Bridge Logic
                 const nextWaypoint = getNextWaypoint(
                     unit.x, unit.y, unit.lane, unit.team,
-                    false, // forceBridge not strictly needed if we pass targetY, logic inside handles it
-                    target.y // Pass targetY so waypoint logic knows if we need to cross river
+                    false,
+                    target.y
                 );
 
                 let destX = target.x;
                 let destY = target.y;
 
-                // Priority: Waypoint > Direct Target
                 if (nextWaypoint) {
                     destX = nextWaypoint.x;
                     destY = nextWaypoint.y;
                 }
 
-                // Move calculation
                 const dx = destX - unit.x;
                 const dy = destY - unit.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-
-                // Stop if we are close enough to attack (accounting for radii)
-                const distToEdge = dist - target.radius - unit.radius;
-
-                if (distToEdge > unit.rangePx) {
-
+                if (dist > 0) {
                     const effectiveSpeed = getEffectiveSpeed(unit);
                     let moveDist = effectiveSpeed * dt;
 
-                    // Cap move distance: don't move INSIDE the target or past range
-                    // We want to stop exactly at rangePx from edge
-                    const desiredDist = dist - (unit.rangePx + target.radius + unit.radius);
-                    // desiredDist is how much further we can go before hitting attack range
+                    // Stop at exact attack range
+                    const desiredDist = distanceToTargetEdge - effectiveAttackRange;
+                    // Actually we want to move closer until distanceToTargetEdge <= effectiveAttackRange
+                    // So we move 'moveDist' pixels closer. 
+                    // But if moveDist > (currentDistToEdge - attackRange), clamp it.
+                    // Wait, logic:
+                    // dist is Center-Center.
+                    // We want Center-Center = target.radius + unit.radius + effectiveAttackRange.
+                    // current Center-Center = dist.
+                    // We need to travel: dist - (target.radius + unit.radius + effectiveAttackRange).
 
-                    if (moveDist > desiredDist && desiredDist > 0) {
-                        moveDist = desiredDist;
+                    const travelNeeded = dist - (target.radius + unit.radius + effectiveAttackRange);
+
+                    if (travelNeeded < moveDist) {
+                        moveDist = Math.max(0, travelNeeded);
                     }
 
-                    unit.x += (dx / dist) * moveDist;
-                    unit.y += (dy / dist) * moveDist;
-                }
+                    const moveX = (dx / dist) * moveDist;
+                    const moveY = (dy / dist) * moveDist;
 
+                    const nextX = unit.x + moveX;
+                    const nextY = unit.y + moveY;
+
+                    // === RIVER OBSTACLE LOGIC ===
+                    // River Y bounds: 360 to 440
+                    // Bridge X bounds: 
+                    // Left: 140-180 (Center 160, width 40)
+                    // Right: 300-340 (Center 320, width 40)
+                    const BRIDGE_WIDTH_HALF = 25; // slightly lenient
+                    const LEFT_BRIDGE_X = 160;
+                    const RIGHT_BRIDGE_X = 320;
+
+                    const inRiverZone = (nextY > 360 && nextY < 440);
+                    const onLeftBridge = Math.abs(nextX - LEFT_BRIDGE_X) < BRIDGE_WIDTH_HALF;
+                    const onRightBridge = Math.abs(nextX - RIGHT_BRIDGE_X) < BRIDGE_WIDTH_HALF;
+
+                    if (inRiverZone && !onLeftBridge && !onRightBridge) {
+                        // COLLISION WITH RIVER!
+                        // Block movement. logic: "Slide" or just Stop Y.
+                        // For simplicity: Allow X movement, Block Y movement if it enters river.
+                        // But since we are moving towards waypoint (which should be correct), 
+                        // this acts as a failsafe.
+
+                        // If pathfinding is correct, this shouldn't trigger often.
+                        // But if it does, we clamp Y to the bank.
+                        if (unit.y <= 360) unit.y = Math.min(nextY, 360);
+                        else if (unit.y >= 440) unit.y = Math.max(nextY, 440);
+
+                        // Allow X movement (sliding along bank)
+                        unit.x = nextX;
+                    } else {
+                        unit.x = nextX;
+                        unit.y = nextY;
+                    }
+                }
             }
         } else {
             // --- NO TARGET: Move logic (Capture buildings going to bridge) ---

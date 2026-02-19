@@ -157,7 +157,7 @@ const DecksScreen = () => {
                                         {card ? (
                                             <>
                                                 {/* Visual Icon */}
-                                                <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-black' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
+                                                <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-white' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
                                                     {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
                                                         <img src={card.visuals.icon} className="w-full h-full object-cover opacity-90" alt={card.name} />
                                                     ) : (
@@ -218,7 +218,7 @@ const DecksScreen = () => {
                                             : 'bg-slate-700 border-slate-500 hover:border-yellow-400'}`}
                                 >
                                     {/* Visual Icon */}
-                                    <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-black' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
+                                    <div className={`absolute inset-0 w-full h-full ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-white' : 'bg-[#9ca3af]'} rounded-md overflow-hidden`}>
                                         {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
                                             <img src={card.visuals.icon} className="w-full h-full object-cover opacity-90" alt={card.name} />
                                         ) : (

@@ -54,12 +54,15 @@ const Hand: React.FC<HandProps> = ({ handIds, selectedCardId, onSelectCard, elix
                                 <span className="text-white font-bold text-xs">{card.elixirCost}</span>
                             </div>
 
-                            {/* Simple Visual */}
-                            <div className="w-[90%] h-[60%] bg-gray-600 rounded flex items-center justify-center mb-1 overflow-hidden">
-                                {/* Placeholder Icon based on type */}
-                                <span className="text-3xl">
-                                    {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
-                                </span>
+                            {/* Visual */}
+                            <div className={`w-[90%] h-[60%] ${card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? 'bg-white' : 'bg-gray-600'} rounded flex items-center justify-center mb-1 overflow-hidden`}>
+                                {card.visuals?.icon && !card.visuals.icon.includes('placeholder') ? (
+                                    <img src={card.visuals.icon} className="w-full h-full object-cover" alt={card.name} />
+                                ) : (
+                                    <span className="text-3xl">
+                                        {card.type === 'spell' ? '🧪' : card.type === 'building' ? '🏰' : '⚔️'}
+                                    </span>
+                                )}
                             </div>
 
                             {/* Name */}

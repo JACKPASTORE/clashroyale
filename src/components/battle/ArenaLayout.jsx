@@ -4,12 +4,22 @@ import { motion } from 'framer-motion';
 import { Team } from '../../engine/types';
 import { getCardById } from '../../data/load';
 
-const UnitRenderer = ({ unit }) => {
+const UnitRenderer = ({ unit, isMirrored }) => {
     const card = getCardById(unit.cardId);
     if (!card) return null;
 
-    const visualX = (unit.x / 480) * 100;
-    const visualY = (unit.y / 800) * 100 + 8; // Offset match
+    let visualX = (unit.x / 480) * 100;
+    let visualY = (unit.y / 800) * 100 + 8; // Offset match
+
+    if (isMirrored) {
+        visualX = 100 - visualX;
+        visualY = 100 - ((unit.y / 800) * 100) + 8; // Keep offset? +8 probably needs check.
+        // Actually, if we invert Y, the +8 offset might push it off screen or wrong way?
+        // Let's refine: Original Y% is based on top.
+        // Mirrored Y% = 100 - OriginalY%. 
+        visualY = 100 - (unit.y / 800) * 100;
+    }
+
     const hpPercent = (unit.hp / unit.maxHp) * 100;
     const barColor = hpPercent > 60 ? '#22c55e' : hpPercent > 30 ? '#eab308' : '#ef4444';
 
@@ -71,14 +81,34 @@ const UnitRenderer = ({ unit }) => {
     );
 };
 
-const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
-    // Find specific towers
-    const redKing = towers.find(t => t.team === Team.RED && t.type === 'king');
-    const redLeft = towers.find(t => t.team === Team.RED && t.type === 'princess' && t.x < 240);
-    const redRight = towers.find(t => t.team === Team.RED && t.type === 'princess' && t.x >= 240);
-    const blueKing = towers.find(t => t.team === Team.BLUE && t.type === 'king');
-    const blueLeft = towers.find(t => t.team === Team.BLUE && t.type === 'princess' && t.x < 240);
-    const blueRight = towers.find(t => t.team === Team.BLUE && t.type === 'princess' && t.x >= 240);
+const ArenaLayout = ({ towers = [], units = [], projectiles = [], isMirrored = false }) => {
+    // Determine Top (Enemy) and Bottom (Player) towers based on mirroring
+    // Default (isMirrored=false/Host/Blue): Enemy=Red(Top), Player=Blue(Bottom)
+    // Mirrored (Client/Red): Enemy=Blue(Top), Player=Red(Bottom)
+
+    const enemyTeam = isMirrored ? Team.BLUE : Team.RED;
+    const playerTeam = isMirrored ? Team.RED : Team.BLUE;
+
+    // Helper to find relative towers
+    // Note: 'left' and 'right' logic might need swap if mirrored?
+    // Engine: x < 240 is Left.
+    // If mirrored (visual flip), x < 240 (Logical Left) becomes Visual Right?
+    // Formula: visualX = 100 - x%.
+    // So x=0 (Left) -> 100 (Right).
+    // Yes, Left/Right swaps visually if we mirror X. 
+
+    // Top (Visual Enemy)
+    const topKing = towers.find(t => t.team === enemyTeam && t.type === 'king');
+    // Top Left Visual = Logical Right if mirrored?
+    // Let's stick to logical find first, and place them freely.
+    // Actually, just finding by ID/position is safer.
+    const topLeft = towers.find(t => t.team === enemyTeam && t.type === 'princess' && (isMirrored ? t.x >= 240 : t.x < 240));
+    const topRight = towers.find(t => t.team === enemyTeam && t.type === 'princess' && (isMirrored ? t.x < 240 : t.x >= 240));
+
+    // Bottom (Visual Player)
+    const botKing = towers.find(t => t.team === playerTeam && t.type === 'king');
+    const botLeft = towers.find(t => t.team === playerTeam && t.type === 'princess' && (isMirrored ? t.x >= 240 : t.x < 240));
+    const botRight = towers.find(t => t.team === playerTeam && t.type === 'princess' && (isMirrored ? t.x < 240 : t.x >= 240));
 
     const getTowerHP = (tower) => tower ? Math.ceil(tower.hp) : 0;
     const getHPPercent = (tower) => tower ? (tower.hp / tower.maxHp) * 100 : 0;
@@ -107,11 +137,11 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                     }}>
                 </div>
 
-                {/* --- ENEMY SIDE (Top) --- */}
+                {/* --- TOP SIDE (Visual Enemy) --- */}
                 <div className="relative flex-1 w-full">
 
-                    {/* ENEMY KING TOWER (Pushed further back) */}
-                    {redKing && (
+                    {/* KING TOWER */}
+                    {topKing && (
                         <div className="absolute top-[-30px] left-1/2 -translate-x-1/2 w-32 h-36 flex flex-col items-center z-20 scale-90">
                             {/* Level Badge */}
                             <div className="absolute -top-4 w-8 h-9 bg-[url('/assets/level_badge.png')] bg-contain bg-no-repeat flex items-center justify-center z-30">
@@ -119,8 +149,7 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                                     <span className="text-black font-black text-xs -rotate-45">15</span>
                                 </div>
                             </div>
-
-                            {/* Tower Structure */}
+                            {/* Tower Structure - Reused Red style for Enemy */}
                             <div className="w-28 h-24 bg-[#b91c1c] rounded-lg border-4 border-[#7f1d1d] shadow-2xl relative flex flex-col items-center justify-end overflow-visible">
                                 <div className="absolute -top-8 w-20 h-10 bg-[#7f1d1d] rounded-t-xl z-0"></div>
                                 <div className="relative z-10 -top-6">
@@ -131,18 +160,18 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                                 </div>
                             </div>
                             <div className="mt-1 bg-black/50 px-1 py-0.5 rounded border border-white/20">
-                                <span className="text-white text-[8px] font-bold block text-center mb-[1px]">{getTowerHP(redKing)}</span>
+                                <span className="text-white text-[8px] font-bold block text-center mb-[1px]">{getTowerHP(topKing)}</span>
                                 <div className="w-20 h-2 bg-black/70 rounded-sm relative overflow-hidden">
-                                    <div className="absolute h-full bg-[#dc2626] transition-all" style={{ width: `${getHPPercent(redKing)}%` }}></div>
+                                    <div className="absolute h-full bg-[#dc2626] transition-all" style={{ width: `${getHPPercent(topKing)}%` }}></div>
                                     <div className="absolute top-0 w-full h-[2px] bg-white/30"></div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ENEMY PRINCESS TOWERS (More spread out) */}
-                    {/* Left */}
-                    {redLeft && (
+                    {/* PRINCESS TOWERS */}
+                    {/* Visual Left */}
+                    {topLeft && (
                         <div className="absolute top-10 left-4 w-24 h-28 flex flex-col items-center z-20 scale-90">
                             <div className="absolute -top-3 z-30 transform -rotate-12">
                                 <div className="w-5 h-5 bg-[#facc15] border border-black flex items-center justify-center shadow font-black text-[9px]">15</div>
@@ -154,16 +183,16 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                                 </div>
                             </div>
                             <div className="mt-3 bg-black/50 px-1 rounded border border-white/20 relative z-30">
-                                <span className="text-white text-[9px] font-bold block leading-tight text-center mb-[1px]">{getTowerHP(redLeft)}</span>
+                                <span className="text-white text-[9px] font-bold block leading-tight text-center mb-[1px]">{getTowerHP(topLeft)}</span>
                                 <div className="w-16 h-1.5 bg-black/70 rounded-sm relative overflow-hidden">
-                                    <div className="absolute h-full bg-[#dc2626] transition-all" style={{ width: `${getHPPercent(redLeft)}%` }}></div>
+                                    <div className="absolute h-full bg-[#dc2626] transition-all" style={{ width: `${getHPPercent(topLeft)}%` }}></div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Right */}
-                    {redRight && (
+                    {/* Visual Right */}
+                    {topRight && (
                         <div className="absolute top-10 right-4 w-24 h-28 flex flex-col items-center z-20 scale-90">
                             <div className="absolute -top-3 z-30 transform rotate-12">
                                 <div className="w-5 h-5 bg-[#facc15] border border-black flex items-center justify-center shadow font-black text-[9px]">15</div>
@@ -175,14 +204,13 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                                 </div>
                             </div>
                             <div className="mt-3 bg-black/50 px-1 rounded border border-white/20 relative z-30">
-                                <span className="text-white text-[9px] font-bold block leading-tight text-center mb-[1px]">{getTowerHP(redRight)}</span>
+                                <span className="text-white text-[9px] font-bold block leading-tight text-center mb-[1px]">{getTowerHP(topRight)}</span>
                                 <div className="w-16 h-1.5 bg-black/70 rounded-sm relative overflow-hidden">
-                                    <div className="absolute h-full bg-[#dc2626] transition-all" style={{ width: `${getHPPercent(redRight)}%` }}></div>
+                                    <div className="absolute h-full bg-[#dc2626] transition-all" style={{ width: `${getHPPercent(topRight)}%` }}></div>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
 
                 {/* --- RIVER (Compact, Wider look) --- */}
@@ -205,18 +233,19 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                 </div>
 
 
-                {/* --- PLAYER SIDE (Bottom) --- */}
+                {/* --- BOTTOM SIDE (Visual Player) --- */}
                 <div className="relative flex-1 w-full">
 
-                    {/* PLAYER KING TOWER (Pushed further down) */}
-                    {blueKing && (
+                    {/* KING TOWER */}
+                    {botKing && (
                         <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 w-32 h-36 flex flex-col items-center z-20 scale-90">
+                            {/* Level Badge */}
                             <div className="absolute -top-4 w-8 h-9 z-30">
                                 <div className="w-6 h-7 bg-black border border-[#facc15] flex items-center justify-center shadow-md skew-y-6">
                                     <span className="text-[#facc15] font-black text-xs">14</span>
                                 </div>
                             </div>
-
+                            {/* Blue style for Player */}
                             <div className="w-28 h-24 bg-[#1e40af] rounded-t-3xl rounded-b-xl border-4 border-[#172554] shadow-2xl relative flex flex-col items-center justify-end">
                                 <div className="absolute -top-4 w-24 h-8 bg-[#3b82f6] rounded-t-full border-t-4 border-[#1e40af] z-10"></div>
                                 <div className="relative z-0 -top-6">
@@ -226,17 +255,17 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                             </div>
                             <div className="mt-1 bg-black/50 px-1 py-0.5 rounded border border-white/20">
                                 <div className="w-20 h-2 bg-black/70 rounded-sm relative overflow-hidden">
-                                    <div className="absolute h-full bg-[#3b82f6] transition-all" style={{ width: `${getHPPercent(blueKing)}%` }}></div>
+                                    <div className="absolute h-full bg-[#3b82f6] transition-all" style={{ width: `${getHPPercent(botKing)}%` }}></div>
                                     <div className="absolute top-0 w-full h-[2px] bg-white/30"></div>
                                 </div>
-                                <span className="text-white text-[8px] font-bold block text-center mt-[1px]">{getTowerHP(blueKing)}</span>
+                                <span className="text-white text-[8px] font-bold block text-center mt-[1px]">{getTowerHP(botKing)}</span>
                             </div>
                         </div>
                     )}
 
-                    {/* PLAYER PRINCESS TOWERS */}
-                    {/* Left */}
-                    {blueLeft && (
+                    {/* PRINCESS TOWERS */}
+                    {/* Visual Left */}
+                    {botLeft && (
                         <div className="absolute bottom-10 left-4 w-24 h-28 flex flex-col items-center z-20 scale-90">
                             <div className="absolute -top-3 z-30">
                                 <div className="w-5 h-5 bg-black border border-[#facc15] flex items-center justify-center shadow text-[#facc15] font-black text-[9px]">14</div>
@@ -249,15 +278,15 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                             </div>
                             <div className="mt-3 bg-black/50 px-1 rounded border border-white/20 relative z-30">
                                 <div className="w-16 h-1.5 bg-black/70 rounded-sm mb-[1px] relative overflow-hidden">
-                                    <div className="absolute h-full bg-[#3b82f6] transition-all" style={{ width: `${getHPPercent(blueLeft)}%` }}></div>
+                                    <div className="absolute h-full bg-[#3b82f6] transition-all" style={{ width: `${getHPPercent(botLeft)}%` }}></div>
                                 </div>
-                                <span className="text-white text-[9px] font-bold block leading-tight text-center">{getTowerHP(blueLeft)}</span>
+                                <span className="text-white text-[9px] font-bold block leading-tight text-center">{getTowerHP(botLeft)}</span>
                             </div>
                         </div>
                     )}
 
-                    {/* Right */}
-                    {blueRight && (
+                    {/* Visual Right */}
+                    {botRight && (
                         <div className="absolute bottom-10 right-4 w-24 h-28 flex flex-col items-center z-20 scale-90">
                             <div className="absolute -top-3 z-30">
                                 <div className="w-5 h-5 bg-black border border-[#facc15] flex items-center justify-center shadow text-[#facc15] font-black text-[9px]">14</div>
@@ -270,9 +299,9 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
                             </div>
                             <div className="mt-3 bg-black/50 px-1 rounded border border-white/20 relative z-30">
                                 <div className="w-16 h-1.5 bg-black/70 rounded-sm mb-[1px] relative overflow-hidden">
-                                    <div className="absolute h-full bg-[#3b82f6] transition-all" style={{ width: `${getHPPercent(blueRight)}%` }}></div>
+                                    <div className="absolute h-full bg-[#3b82f6] transition-all" style={{ width: `${getHPPercent(botRight)}%` }}></div>
                                 </div>
-                                <span className="text-white text-[9px] font-bold block leading-tight text-center">{getTowerHP(blueRight)}</span>
+                                <span className="text-white text-[9px] font-bold block leading-tight text-center">{getTowerHP(botRight)}</span>
                             </div>
                         </div>
                     )}
@@ -283,41 +312,36 @@ const ArenaLayout = ({ towers = [], units = [], projectiles = [] }) => {
 
             {/* --- PLACED UNITS (Global Overlay) --- */}
             {units.map(unit => (
-                <UnitRenderer key={unit.id} unit={unit} />
+                <UnitRenderer key={unit.id} unit={unit} isMirrored={isMirrored} />
             ))}
 
             {/* --- PROJECTILES --- */}
             {projectiles && projectiles.map(proj => {
-                // Calculate visual position (convert logic coords to %)
-                const visualX = (proj.x / 480) * 100;
-                const visualY = (proj.y / 800) * 100 + 8; // Offset match
+                let visualX = (proj.x / 480) * 100;
+                let visualY = (proj.y / 800) * 100 + 8; // Offset match
 
-                // Use calculated angle or default to 0
-                // Add +90 deg (PI/2) because default arrow/image usually points UP or RIGHT.
-                // If arrow image points UP, and atan2 gives angle from X axis (RIGHT), we need adjustment.
-                // Let's assume image points UP (standard icon). 
-                // If angle is 0 (Right), and image points UP, we need to rotate 90 deg (PI/2)? No -> -90 (-PI/2).
-                // Let's assume standard 'arrow' points UP.
-                // Actually the Fleche Arc image looks like a spear pointing diagonally top-left?
-                // Let's try standard rotation first.
-                // Emoji 🏹 points top-right roughly. Fireball 🔥 is round.
+                // Mirror Logic
+                if (isMirrored) {
+                    visualX = 100 - visualX;
+                    visualY = 100 - (proj.y / 800) * 100;
+                }
 
-                // Let's just use the angle directly and tweak if needed.
-                // CSS rotate accepts radians if we use 'rad' unit, or degrees using 'deg'.
-                // proj.angle is in radians.
-                // We likely need an offset based on the image orientation.
-                // Assuming standard "Right-facing" sprite = 0 rad.
-                // If sprite is Up-facing, subtract 90deg.
-
-                // CSS rotate accepts radians if we use 'rad' unit, or degrees using 'deg'.
-                // proj.angle is in radians.
-                // proj.rotationOffset is in degrees (optional)
+                // Angle needs mirroring too! 
+                // If we flip the board, we are essentially rotating 180deg.
+                // So the angle should also be rotated 180deg.
+                // Or simply flipped?
+                // If a projectile travels Right (0deg), after mirror (Left/Right swap), it should travel Left (180deg).
+                // If it travels Up (-90deg), after mirror (Up/Down swap), it should travel Down (90deg).
+                // So yes, angle + 180deg (or PI rad).
 
                 const angleRad = proj.angle || 0;
                 const offsetDeg = proj.rotationOffset || 0;
+                let angleDeg = angleRad * (180 / Math.PI);
 
-                // Combine: convert rad to deg for simpler CSS string or vice versa
-                const angleDeg = angleRad * (180 / Math.PI);
+                if (isMirrored) {
+                    angleDeg += 180;
+                }
+
                 const totalRotation = angleDeg + offsetDeg;
 
 
